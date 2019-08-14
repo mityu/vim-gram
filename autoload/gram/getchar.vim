@@ -8,6 +8,7 @@ function! s:__init__() abort
   const s:mapping = gram#module#import('mapping')
   const s:impl = gram#module#import('impl')
   const s:edit = gram#module#import('edit')
+  const s:message = gram#module#import('message')
 
   const s:plugmaps = {
        \ 'j': {-> s:_nmap_cursor(v:count1)},
@@ -93,8 +94,10 @@ function! s:_safe_feedkeys(keys) abort
   call s:window.setvar('&modifiable', 0)
   try
     call s:window.execute('normal ' .. keys)
+  catch /^Vim\%((\a\+)\)\=:E21:/  " 'Cannot make changes' error.
+    " Ignore.
   catch
-    " TODO: message? Ignore?
+    call s:message.echomsg_error(expand('<sfile>') .. v:exception)
   finally
     call s:window.setvar('&modifiable', 1)
   endtry

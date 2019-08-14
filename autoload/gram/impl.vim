@@ -93,7 +93,7 @@ function! s:select(config, options) abort
   try
     call s:_main_loop()  " Loop until selecting is canceled/finished.
   catch
-    call s:message.echomsg_error(v:exception)
+    call s:message.echomsg_error(expand('<sfile>') .. v:exception)
   endtry
 
   call inputrestore()

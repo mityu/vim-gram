@@ -55,7 +55,8 @@ function! s:unmap(mode, lhs) abort
     endfor
     call remove(node, key[-1])
   catch /^Vim\%((\a\+)\)\=:E716:/  " s:lhs not found in s:map
-    " TODO: Ignore or show error messages?
+    call s:message.echomsg_error('gram#custom#unmap(): {lhs} not found: ' ..
+          \ a:lhs)
   endtry
 endfunction
 
