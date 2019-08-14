@@ -1,0 +1,270 @@
+*gram.txt* A filtering plugin for Vim8
+
+Maintainer: mityu <mityu.email (at) gmail.com>
+License: the MIT License
+==============================================================================
+CONTENTS                                           *gram-contents*
+
+FEATURES                      |gram-features|
+REQUIREMENTS                  |gram-requirements|
+CUSTOMIZE                     |gram-customize|
+  FUNCTIONS                   |gram-functions|
+  OPTIONS                     |gram-options|
+  AUTOCMD                     |gram-autocmd|
+  COLORS                      |gram-color|
+  CREATE-MATCHERS             |gram-create-matchers|
+  ITEMS                       |gram-item|
+CONFIGURATION-EXAMPLES        |gram-configuration-examples|
+TODO                          |gram-todo|
+KNOWN-ISSUES                  |gram-known-issues|
+
+
+==============================================================================
+FEATURES                                            *gram-features*
+
+- Asynchronous filtering by using |timer|.
+- Available in |cmdwin|.
+
+==============================================================================
+REQUIREMENTS                                       *gram-requirements*
+
+- Vim8.1.1418 or later
+- +popup
+- +timer
+
+and maybe some source requires +job.
+
+
+==============================================================================
+CUSTOMIZE                                           *gram-customize*
+
+------------------------------------------------------------------------------
+FUNCTIONS                                           *gram-functions*
+
+                                                    *gram#launch()*
+gram#select({config} [,{options}])
+    Launch this plugin and returns the selected item.  If nothing is selected,
+    returns {} (an empty dictionary).
+    {config} must have the following entries:
+    - name
+         |String|. The source name.
+
+                                                *gram#launch()-completefunc*
+    - completefunc
+          |Funcref| or |String| of a listener function. The function is called
+          when user typed key(s) to filter items or new items are set via
+          |gram#set_items()| or |gram#add_items()| with one argument: the user
+          inputs.
+    {options} are |gram-options|.  You can overwrite the user configrations via
+    this argument, but you shouldn't use this a lot.  Plugin's option changes
+    may make the users confused.
+
+                                                    *gram#highlight_match()*
+gram#highlight_match({pattern})
+    Set highlight matching pattern of completions.  You can use |patterns| in
+    {pattern}.  The pattern will be highlighted with color of "gramMatch".
+
+                                                    *gram#set_items()*
+gram#set_items({items})
+    Replace previous base items with {items}. The details of {items} is
+    |gram-item|.
+
+                                                    *gram#add_items()*
+gram#add_items({items})
+    Add {items} to base items.
+
+                                                    *gram#get_items()*
+gram#get_items()
+    Returns presently shown filtered items.
+    Returned items are list of dictionary and each dictionary has these
+    entries: "word", "abbr", "menu", and "user_data".  Unspecified entry's
+    value will be ""(an empty string).
+
+                                                    *gram#is_active()*
+gram#is_active()
+    Returns 1 if gram is active; otherwise, returns 0.  This function is
+    useful when you make asyncronous matchers or completefunc.
+
+                                  *gram#custom#noremap()*  *gram#custom#map()*
+gram#custom#noremap({mode}, {lhs}, {rhs})
+gram#custom#map({mode}, {lhs}, {rhs})
+    |:noremap| or |:map| for this plugin.
+    Map {lhs} to {rhs}, but you cannot overwrite <C-c>.
+    <C-c> closes |gram.vim|'s window in normal mode and cancels inputting in
+    insert mode.
+
+    {mode} is one of the followings:
+    n       Normal mode
+    i       Insert mode
+
+    {rhs} is a string or a list of strings.  If you specify a list, the
+    strings will evaluated individually.  Because |gram.vim| cannot handle
+    mode changes between Normal mode and Insert mode in {rhs}, this function
+    is useful to make mappings that has mode change and other actions.
+    Example: >
+    " Quit gram.vim from insert mode via <C-e>.
+    call gram#custom#noremap('i', '<C-e>', ['<ESC>', 'q'])
+<
+    In |gram.vim|'s window, in normal mode, you can use Vim's built-in normal
+    mode mappings without [count] except for the following mappings:
+
+    <CR>    Select an item
+    q       Close window
+
+    And, however, |gram.vim| cannot handle built-in mappings that needs more
+    than two key inputs to use, like |gg|.  If you want to use them, please map
+    them to themselves via |gram#custom#noremap()|.  Example to enable |gg|: >
+    call gram#custom#noremap('n', 'gg', 'gg')
+<
+
+                                                    *gram#custom#unmap()*
+gram#custom#unmap({mode}, {lhs})
+    |:unmap| for this plugin.
+
+                                                    *gram#custom#option()*
+gram#custom#set_option({option}, {value})
+    Set value of option named {option} to {value}.
+    See |gram-options| to know the option list.
+
+                                                    *gram#custom#get_option()*
+gram#custom#get_option({option})
+    Get the value of option named {option}.
+
+                                                *gram#custom#matcher_add()*
+gram#custom#matcher_add({name}, {matcher}, {on-input})
+    {name} is a |String| of the matcher's name.  It will be the value of
+    |gram-option-matcher|.
+    Both of {matcher} and {on-input} are |String| or |Funcref|.  See
+    |gram-matcher| for the details.
+    {NOT IMPLEMENTED YET}
+
+
+
+------------------------------------------------------------------------------
+OPTIONS                                           *gram-options*
+
+                                                *gram-option-statusline*
+statusline  (Default: "%n")
+    String.
+    You can use the following modifiers:
+        %n  the source name
+        %c  count of the completion items
+        %i  index of the selecting item
+
+                                                *gram-option-prompt*
+prompt  (Default: ">> ")
+    String.
+    The prompt text.
+
+                                                *gram-options-force_refresh*
+force_refresh  (Default: 0)
+    Number or Boolean.
+    If this option is set to true, |gram#launch()-completefunc| is called
+    whenever the users input keys in insert mode.
+    If this option is set to false, |gram#launch()-completefunc| is called
+    once just after |gram.vim| opens its window.
+
+                                                *gram-option-prompt*
+matcher  (Default: "multi_regexp")
+    String.
+    Specify a matcher to use.
+
+The following is list of built-in matchers:
+multi_regexp
+    You can specify multi regexp patterns to filter candidates.  Patterns will
+    be separated with spaces.  To include spaces in patterns, please escape
+    them with "\".
+
+------------------------------------------------------------------------------
+AUTOCMD                                           *gram-autocmd*
+
+gram.vim triggers a |User| event with pattern "gram-first-start".
+This event is triggered only once at the first calls of |gram#launch()|.
+You can use this event to set some configurations like mappings or options.
+Example: >
+    augroup gram-init
+      autocmd!
+      autocmd User gram-first-start call s:gram_init()
+    augroup END
+    function! s:gram_init() abort
+      call gram#custom#set_option('prompt', 'PATTERN: ')
+      call gram#custom#set_option('force_refresh', 1)
+    endfunction
+<
+
+------------------------------------------------------------------------------
+COLORS                                            *gram-color*
+
+gram.vim uses the following highlight groups for coloring texts.
+You can overwrite the default color settings just by setting colors via
+|:highlight|.
+
+gramMatch       (Default: Number highlight group)
+    The color to show matched strings.
+
+------------------------------------------------------------------------------
+CREATE-MATCHERS                                      *gram-create-matchers*
+
+Register matcher~
+You can register your matcher in these two ways:
+
+1. By calling |gram#custom#matcher_add()|.  This way is useful when you want to
+  define a matcher in your .vimrc.
+  {NOT IMPLEMENTED YET}
+
+2. Define a matcher function in "autoload/gram/source/matcher/{name}.vim"
+  If you use this way, you have to implement two functions
+  "gram#source#matcher#{name}#matcher()" and
+  "gram#source#matcher#{name}#on_input()".
+  And, the matcher name will be "{name}".
+
+matcher()~
+The matcher function takes one argument: An item. It have to return true if
+the item should be in filtered items; otherwise, have to return false.
+
+on_input()~
+This function is called when the user-input is changed.  It takes one
+argument: the user-input.  You should prepare for calling matcher() in this
+function.
+
+
+------------------------------------------------------------------------------
+ITEMS                                             *gram-item*
+
+    {items} must be a list of strings or dictionaries.  When it is a list of
+    dictionaries, each dictionary can contain these entries of
+    |complete-items|: "word", "abbr", "menu" and "user_data"
+
+
+==============================================================================
+CONFIGURATION-EXAMPLES                          *gram-configuration-examples*
+
+- Emacs like cursor moves in insert mode. >
+    call gram#custom#noremap('i', '<C-f>', '<Right>')
+    call gram#custom#noremap('i', '<C-b>', '<Left>')
+    call gram#custom#noremap('i', '<C-a>', '<C-o>0')
+    call gram#custom#noremap('i', '<C-e>', '<C-o>$')
+<
+
+==============================================================================
+TODO                                                *gram-todo*
+
+* Add tests.
+* Add default matchers.
+* Add default sources. (They should be other plugins?)
+* Better window size.
+* Add modifiers for |gram-option-statusline|.
+* Complete this document.
+* Handle [count].
+* Use 'timeoutlen'.
+
+
+==============================================================================
+KNOWN-ISSUES                                        *gram-known-issues*
+
+* Screen doesn't scroll.
+* Sometimes duplicates completion items.
+
+
+==============================================================================
+    vim:tw=78:et:ft=help:norl:
