@@ -10,30 +10,29 @@ function! s:__init__() abort
   const s:edit = gram#module#import('edit')
   const s:message = gram#module#import('message')
 
+  " These mappings are defined with <expr>.
   const s:plugmaps = {
-       \ 'j': {-> s:_nmap_cursor(v:count1)},
-       \ 'k': {-> s:_nmap_cursor(-v:count1)},
-       \ "\<CR>": 's:_nmap_select',
-       \ 'q': 's:_nmap_quit',
+       \ 'j': '["j", "gg"][line(".") == line("$")]',
+       \ 'k': '["k", "G"][line(".") == 1]',
+       \ "\<CR>": printf('<SNR>%d__nmap_select()', s:SNR()),
+       \ 'q': printf('<SNR>%d__nmap_quit()', s:SNR()),
        \ }
 
   let s:mode = 'n'
-  let s:queue = []
 endfunction
 
 function! s:__on_close__(idx) abort
   let s:mode = 'n'
 endfunction
 
-function! s:initialize() abort
-  call s:window.execute_func({-> s:_initialize_impl()})
+function! s:SNR() abort
+  return matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\zeSNR$')
 endfunction
-function! s:_initialize_impl() abort
-  nmapclear <buffer>
-  let maps = map(split(execute('nmap'), "\n"),
-        \ {_, line -> {map -> printf('nnoremap <buffer> %s %s', map, map)}
-        \ (matchstr(line, '^n\a*\s\+\zs.\+\ze\s\+'))})
-  execute join(maps, "\n")
+
+function! s:define_plugmaps() abort
+  let cmd = map(items(s:plugmaps), {_, item ->
+        \ printf('nnoremap <buffer> <expr> %s %s', item[0], item[1])})
+  call s:window.execute(cmd)
 endfunction
 
 function! s:process() abort
@@ -59,12 +58,8 @@ function! s:evaluate_keys(key_sequences) abort
 endfunction
 
 function! s:_evaluate_keys_n(keys) abort
-  if index(['i', 'a', 'o'], a:keys) != -1
-    call s:start_insert()
-  elseif a:keys ==# "\<C-c>"
+  if a:keys ==# "\<C-c>"
     call s:window.background()
-  elseif has_key(s:plugmaps, a:keys)
-    call call(s:plugmaps[a:keys], [])
   else
     call s:_safe_feedkeys(a:keys)
   endif
@@ -95,7 +90,8 @@ function! s:_safe_feedkeys(keys) abort
   try
     call s:window.execute('normal ' .. keys)
   catch /^Vim\%((\a\+)\)\=:E21:/  " 'Cannot make changes' error.
-    " Ignore.
+    " TODO: Handle only entering insertmode.
+    call s:start_insert()
   catch
     call s:message.echomsg_error(expand('<sfile>') .. v:exception)
   finally
@@ -134,25 +130,14 @@ endfunction
 
 
 " --- Plugin default mappings ---
-function! s:_nmap_cursor(count) abort
-  call s:window.execute_func({-> s:_nmap_cursor_impl(a:count)})
-endfunction
-function! s:_nmap_cursor_impl(count) abort
-  let mod = line('$')
-  let line = line('.') - 1 + a:count
-  if line < 0
-    let line += ((-line / mod) + 1) * mod
-  endif
-  let line = line % mod + 1
-  call cursor(line, 0)
-endfunction
-
 function! s:_nmap_select() abort
   call s:window.background(s:window.execute_func({-> line('.') - 1}))
+  return ''
 endfunction
 
 function! s:_nmap_quit() abort
   call s:window.background()
+  return ''
 endfunction
 
 let &cpoptions = s:cpoptions_save

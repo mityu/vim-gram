@@ -60,6 +60,7 @@ function! s:foreground() abort
         \ {'line': pos.line - 2, 'col': pos.col})
 
   call s:setvar('&cursorline', 1)
+  call gram#module#import('getchar').define_plugmaps()
 endfunction
 
 function! s:background(...) abort
