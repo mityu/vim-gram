@@ -53,7 +53,7 @@ function! s:unmap(mode, lhs) abort
     for key in keys[: -2]
       let node = node[key]
     endfor
-    call remove(node, key[-1])
+    call remove(node, keys[-1])
   catch /^Vim\%((\a\+)\)\=:E716:/  " s:lhs not found in s:map
     call s:message.echomsg_error('gram#custom#unmap(): {lhs} not found: ' ..
           \ a:lhs)
