@@ -58,7 +58,7 @@ function! s:select(config, options) abort
     call s:_init()
   endif
 
-  let requirements = ['name', 'completefunc']
+  let requirements = ['completefunc']
   let entries = keys(a:config)
   let missing_entries = filter(requirements, 'index(entries, v:val) == -1')
   if !empty(missing_entries)
@@ -168,7 +168,7 @@ endfunction
 
 function! s:generate_statusline() abort
   const modifiers = {
-        \ '%n': s:source_config.name,
+        \ '%n': get(s:source_config, 'name', "[No name]"),
         \ '%c': s:window.execute_func({-> line('$') - empty(gram#get_items('matched'))}),
         \ '%i': s:window.execute_func({-> line('.') - empty(gram#get_items('matched'))}),
         \ }

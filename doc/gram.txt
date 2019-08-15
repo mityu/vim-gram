@@ -46,15 +46,16 @@ gram#select({config} [,{options}])
     Launch this plugin and returns the selected item.  If nothing is selected,
     returns {} (an empty dictionary).
     {config} must have the following entries:
-    - name
-         |String|. The source name.
-
                                                 *gram#launch()-completefunc*
-    - completefunc
+    - completefunc (Necessary)
           |Funcref| or |String| of a listener function. The function is called
           when user typed key(s) to filter items or new items are set via
           |gram#set_items()| or |gram#add_items()| with one argument: the user
           inputs.
+
+    - name (Optional)
+         |String|. The source name.
+
     {options} are |gram-options|.  You can overwrite the user configrations via
     this argument, but you shouldn't use this a lot.  Plugin's option changes
     may make the users confused.
@@ -154,7 +155,7 @@ OPTIONS                                           *gram-options*
 statusline  (Default: "%n")
     String.
     You can use the following modifiers:
-        %n  the source name
+        %n  the source name.  Becomes "[No name]" if it's omitted.
         %c  count of the completion items
         %i  index of the selecting item
 
