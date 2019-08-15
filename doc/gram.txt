@@ -28,7 +28,7 @@ FEATURES                                            *gram-features*
 ==============================================================================
 REQUIREMENTS                                       *gram-requirements*
 
-- Vim8.1.1418 or later
+- Vim8.1.1539 or later
 - +popup
 - +timer
 

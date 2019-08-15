@@ -23,7 +23,7 @@ cache:
     - $HOME/vim-$VIM_VERSION
 
 env:
-  - VIM_VERSION=8.1.1418
+  - VIM_VERSION=8.1.1539
 
 script:
   - export PATH=$HOME/vim-$VIM_VERSION/bin:$PATH
