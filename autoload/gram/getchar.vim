@@ -66,9 +66,7 @@ function! s:_evaluate_keys_n(keys) abort
 endfunction
 
 function! s:_evaluate_keys_i(keys) abort
-  if a:keys ==# "\<ESC>"
-    call s:stop_insert()
-  elseif a:keys ==# "\<C-c>"
+  if a:keys ==# "\<C-c>"
     call s:cancel_insert()
   else
     call s:edit.insert_char(a:keys)
@@ -102,17 +100,20 @@ endfunction
 function! s:start_insert() abort
   let s:mode = 'i'
   call s:edit.start()
+  return ''
 endfunction
 
 function! s:stop_insert() abort
   let s:mode = 'n'
   call s:edit.stop()
+  return ''
 endfunction
 
 function! s:cancel_insert() abort
   let s:mode = 'n'
   call s:edit.cancel()
   call s:_insert_on_changed()
+  return ''
 endfunction
 
 function! s:get_input() abort
@@ -125,7 +126,7 @@ endfunction
 
 function! s:_insert_on_changed() abort
   let input = s:edit.get_input_info()
-  call s:impl.on_input_changed(input.text, input.col_idx + 1)
+  call s:impl.on_input_changed(input.text)
 endfunction
 
 

@@ -4,6 +4,7 @@ set cpoptions&vim
 
 function! s:__init__() abort
   const s:window = gram#module#import('window')
+  const s:getchar = gram#module#import('getchar')
   const s:null_input = {'text': '', 'col_idx': 0, 'text_save': ''}
   let s:input = copy(s:null_input)
 
@@ -11,6 +12,19 @@ function! s:__init__() abort
   function! s:_buf.create() abort
     if self.winid == 0
       let self.winid = popup_create('', {'callback': self.on_close})
+
+      " Built-in <ESC>
+      " XXX: I don't know why but if remove `col("$") != 1`, this mapping
+      " doesn't work.
+      call self.execute('inoremap <buffer> <expr> <Plug>(ESC) ' ..
+            \ '"\<ESC>" .. ["l", ""][col(".") == 1 && col("$") != 1]')
+
+      " Plugin <ESC>
+      call self.execute('inoremap <buffer> <expr> <ESC> ' ..
+            \ string(get(s:getchar.stop_insert, 'func')) .. '()')
+
+      " Type <CR> to decide input.
+      call self.execute('imap <buffer> <CR> <ESC>')
     endif
   endfunction
   function! s:_buf.close() abort
@@ -29,7 +43,7 @@ function! s:__init__() abort
     endtry
   endfunction
   function! s:_buf.ex_normal(keys) abort
-    call self.execute('normal! ' .. a:keys)
+    call self.execute('normal ' .. a:keys)
   endfunction
   function! s:_buf.set_state(text, col) abort
     call self.execute([
@@ -59,7 +73,7 @@ endfunction
 
 function! s:start() abort
   let s:input.text_save = s:input.text
-  call s:window.show_cursor(1)
+  call s:show_cursor()
   call s:_buf.create()
 endfunction
 
@@ -74,8 +88,14 @@ function! s:cancel() abort
 endfunction
 
 function! s:insert_char(c) abort
-  call s:_ex_normal('i' .. a:c ..
-        \ "\<C-r>=\"\\\<lt>ESC>\" .. ['l', ''][col('.') == 1]\<CR>")
+  call s:_ex_normal('i' .. a:c .. "\<Plug>(ESC)")
+  call s:show_cursor()
+endfunction
+
+function! s:show_cursor() abort
+  if s:getchar.get_mode() ==# 'i'
+    call s:window.show_cursor(s:input.col_idx + 1)
+  endif
 endfunction
 
 function! s:_ex_normal(keys) abort

@@ -180,13 +180,12 @@ function! s:generate_statusline() abort
         \ )
 endfunction
 
-function! s:on_input_changed(input, curcol) abort
+function! s:on_input_changed(input) abort
   call s:matcher.invoke_on_input(a:input)
   if s:custom.get_option('force_refresh')
     call s:invoke_completefunc(a:input)
   endif
   call s:window.display_input_string(a:input)
-  call s:window.show_cursor(a:curcol)
   call s:_trigger_matcher(s:get_items('base'))
 endfunction
 

@@ -116,6 +116,7 @@ gram#custom#map({mode}, {lhs}, {rhs})
 
     insert mode
     -----------
+    <CR>    Decide input and leave insert mode
     <C-c>   Cancel inputting and leave insert mode
 
     And, however, |gram.vim| cannot handle built-in mappings that needs more
