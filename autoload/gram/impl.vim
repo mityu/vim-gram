@@ -84,7 +84,6 @@ function! s:select(config, options) abort
   let s:context.items = {'base': [], 'matched': []}
 
   call s:window.foreground()
-  call s:window.execute_func(function('s:highlight_match', ['']))
   call s:window.display_input_string('')
   call s:invoke_completefunc('')
   redraw!
