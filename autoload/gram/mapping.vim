@@ -120,7 +120,7 @@ function! s:_get_rhs(mode, key_sequence) abort
     return [{'key': a:key_sequence[: lhs_length], 'kind': 'noremap'},
           \ a:key_sequence[lhs_length :]]
   endif
-  return [rhs.data, a:key_sequence[lhs_length + 1 :]]
+  return [rhs.data, a:key_sequence[rhs.lhs_length :]]
 endfunction
 
 
