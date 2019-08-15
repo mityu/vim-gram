@@ -144,7 +144,6 @@ gram#custom#matcher_add({name}, {matcher}, {on-input})
     |gram-option-matcher|.
     Both of {matcher} and {on-input} are |String| or |Funcref|.  See
     |gram-matcher| for the details.
-    {NOT IMPLEMENTED YET}
 
 
 
@@ -218,7 +217,6 @@ You can register your matcher in these two ways:
 
 1. By calling |gram#custom#matcher_add()|.  This way is useful when you want to
   define a matcher in your .vimrc.
-  {NOT IMPLEMENTED YET}
 
 2. Define a matcher function in "autoload/gram/source/matcher/{name}.vim"
   If you use this way, you have to implement two functions
