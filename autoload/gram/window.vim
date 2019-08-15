@@ -14,6 +14,9 @@ function! s:__init__() abort
   const s:message = gram#module#import('message')
   const s:GetOption = gram#module#import('custom').get_option
   const s:RequestRedraw = gram#module#import('impl').request_redraw
+
+  const s:PopupHeight = {-> min([max([&lines * 3 / 4, 35]), &lines - 3])}
+  const s:PopupWidth = {-> min([max([&columns / 2, 90]), &columns])}
   const s:completion_options = {
         \ 'pos': {-> 'center'},
         \ 'drag': {-> 0},
@@ -22,10 +25,10 @@ function! s:__init__() abort
         \ 'cursorline': {-> 0},
         \ 'highlight': {-> '_gramWindow_'},
         \ 'zindex': {-> 100},
-        \ 'minheight': {-> &lines * 3 / 4},
-        \ 'maxheight': {-> &lines * 3 / 4},
-        \ 'minwidth': {-> &columns / 2},
-        \ 'maxwidth': {-> &columns / 2},
+        \ 'minheight': s:PopupHeight,
+        \ 'maxheight': s:PopupHeight,
+        \ 'minwidth': s:PopupWidth,
+        \ 'maxwidth': s:PopupWidth,
         \ }
   const s:prompt_options = {
         \ 'pos': {-> 'topleft'},
@@ -36,8 +39,8 @@ function! s:__init__() abort
         \ 'zindex': {-> 100},
         \ 'minheight': {-> 1},
         \ 'maxheight': {-> 1},
-        \ 'minwidth': s:completion_options.minwidth,
-        \ 'maxwidth': s:completion_options.maxwidth,
+        \ 'minwidth': s:PopupWidth,
+        \ 'maxwidth': s:PopupWidth,
         \ 'title': {-> 'statusline'},
         \ }
 endfunction

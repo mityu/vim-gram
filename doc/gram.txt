@@ -259,7 +259,6 @@ TODO                                                *gram-todo*
 * Add tests.
 * Add default matchers.
 * Add default sources. (They should be other plugins?)
-* Better window size.
 * Add modifiers for |gram-option-statusline|.
 * Complete this document.
 * Handle [count].
