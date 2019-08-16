@@ -45,7 +45,7 @@ function! s:__init__() abort
         \ }
 endfunction
 
-function! s:__on_close__(selected_idx) abort
+function! s:__on_close__() abort
   " Cleawn up matches.
   call s:_matchdelete('cursor', s:prompt_winID)
   call s:_matchdelete('highlight', s:completion_winID)

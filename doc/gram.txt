@@ -56,6 +56,11 @@ gram#select({config} [,{options}])
     - name (Optional)
          |String|. The source name.
 
+    - callback (Optional)
+        |Funcref| or |String| of a callback function.  This function is called
+        only when the user select a item.  (If selecting is canceled, this
+        function won't be called.)  The argument is the selected item.
+
     {options} are |gram-options|.  You can overwrite the user configrations via
     this argument, but you shouldn't use this a lot.  Plugin's option changes
     may make the users confused.

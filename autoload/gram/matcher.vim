@@ -29,7 +29,7 @@ function! s:__init__() abort
   let s:current_matcher = {}
 endfunction
 
-function! s:__on_close__(idx) abort
+function! s:__on_close__() abort
   let s:current_matcher = {}
 endfunction
 

@@ -20,14 +20,18 @@ function! s:__init__() abort
   let s:selected_item = {}
 endfunction
 
-function! s:__on_close__(selected_idx) abort
+function! s:__on_close__() abort
+  let s:source_config = {}
+  let s:context = {}
+  call s:custom.remove_source_options()
+endfunction
+
+function! s:set_selected_item(idx) abort
   if a:selected_idx >= 0
     let s:selected_item = s:context.items.matched[a:selected_idx]
   else
     let s:selected_item = {}
   endif
-  let s:context = {}
-  call s:custom.remove_source_options()
 endfunction
 
 function! s:_init() abort
@@ -98,6 +102,9 @@ function! s:select(config, options) abort
   call inputrestore()
   call s:window.background()
 
+  if has_key(s:source_config, 'callback')
+    call call(s:source_config.callback, [deepcopy(s:selected_item)])
+  endif
   try
     return deepcopy(s:selected_item)
   finally

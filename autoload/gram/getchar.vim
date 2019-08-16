@@ -21,7 +21,7 @@ function! s:__init__() abort
   let s:mode = 'n'
 endfunction
 
-function! s:__on_close__(idx) abort
+function! s:__on_close__() abort
   let s:mode = 'n'
 endfunction
 

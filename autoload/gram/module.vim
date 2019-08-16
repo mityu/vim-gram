@@ -42,12 +42,11 @@ function! gram#module#import(name) abort
 endfunction
 
 function! gram#module#on_close(winid, selected_idx) abort
-  " Use -1 as selected index whenever selecting is canceled.
-  let selected_idx = a:selected_idx < 0 ? -1 : a:selected_idx
-
   for Callback in values(s:module_callbacks)
-    call Callback(selected_idx)
+    call Callback()
   endfor
+
+  call gram#module#import('impl').set_selected_item(a:selected_idx)
 endfunction
 
 let &cpoptions = s:cpoptions_save

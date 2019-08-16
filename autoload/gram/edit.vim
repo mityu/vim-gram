@@ -58,7 +58,7 @@ function! s:__init__() abort
   endfunction
 endfunction
 
-function! s:__on_close__(idx) abort
+function! s:__on_close__() abort
   let s:input = copy(s:null_input)
   call s:_buf.close()
 endfunction
