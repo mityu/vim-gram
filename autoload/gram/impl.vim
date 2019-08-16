@@ -26,7 +26,7 @@ function! s:__on_close__() abort
   call s:custom.remove_source_options()
 endfunction
 
-function! s:set_selected_item(idx) abort
+function! s:set_selected_item(selected_idx) abort
   if a:selected_idx >= 0
     let s:selected_item = s:context.items.matched[a:selected_idx]
   else
