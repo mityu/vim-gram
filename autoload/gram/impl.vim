@@ -267,6 +267,11 @@ function! s:_set_window_color() abort
     " Got a highlight link. Try again.
     let target = hl_arg
   endwhile
+
+  if hl_arg ==# 'cleared' || hl_arg ==# ''
+    let hl_arg = 'NONE'
+  endif
+
   execute 'highlight _gramWindow_' hl_arg
 endfunction
 
