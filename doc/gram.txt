@@ -41,20 +41,19 @@ CUSTOMIZE                                           *gram-customize*
 ------------------------------------------------------------------------------
 FUNCTIONS                                           *gram-functions*
 
-                                                    *gram#launch()*
+                                                    *gram#select()*
 gram#select({config} [,{options}])
     Launch this plugin and returns the selected item.  If nothing is selected,
     returns {} (an empty dictionary).
     {config} must have the following entries:
-                                                *gram#launch()-completefunc*
+                                                *gram#select()-completefunc*
     - completefunc (Necessary)
-          |Funcref| or |String| of a listener function. The function is called
-          when user typed key(s) to filter items or new items are set via
-          |gram#set_items()| or |gram#add_items()| with one argument: the user
-          inputs.
+        |Funcref| or |String| of a function to list items.  The argument is
+        the user input and this function must return items to select.  See
+        |gram-options-force_refresh| to know when this function is called.
 
     - name (Optional)
-         |String|. The source name.
+        |String|. The source name.
 
     - callback (Optional)
         |Funcref| or |String| of a callback function.  This function is called
@@ -158,7 +157,7 @@ OPTIONS                                           *gram-options*
 
                                                 *gram-option-statusline*
 statusline  (Default: "%n")
-    String.
+    |String|.
     You can use the following modifiers:
         %n  the source name.  Becomes "[No name]" if it's omitted.
         %c  count of the completion items
@@ -166,12 +165,12 @@ statusline  (Default: "%n")
 
                                                 *gram-option-prompt*
 prompt  (Default: ">> ")
-    String.
+    |String|.
     The prompt text.
 
                                                 *gram-options-force_refresh*
 force_refresh  (Default: 0)
-    Number or Boolean.
+    |Number| or |Boolean|.
     If this option is set to true, |gram#launch()-completefunc| is called
     whenever the users input keys in insert mode.
     If this option is set to false, |gram#launch()-completefunc| is called
@@ -179,7 +178,7 @@ force_refresh  (Default: 0)
 
                                                 *gram-option-prompt*
 matcher  (Default: "multi_regexp")
-    String.
+    |String|.
     Specify a matcher to use.
 
 The following is list of built-in matchers:
