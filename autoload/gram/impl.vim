@@ -64,11 +64,11 @@ function! s:select(config, options) abort
   if !empty(missing_entries)
     call s:message.echomsg_error(
           \ 'Not enough config entries: Missing ' .. string(missing_entries))
-    return
+    return {}
   endif
 
   if !s:matcher.set(s:custom.get_option('matcher'))
-    return
+    return {}
   endif
 
   for [key, Value] in items(a:config)  " 'Value' might be Funcref.
