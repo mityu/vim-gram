@@ -42,11 +42,11 @@ function! gram#module#import(name) abort
 endfunction
 
 function! gram#module#on_close(winid, selected_idx) abort
+  call gram#module#import('impl').set_selected_item(a:selected_idx)
+
   for Callback in values(s:module_callbacks)
     call Callback()
   endfor
-
-  call gram#module#import('impl').set_selected_item(a:selected_idx)
 endfunction
 
 let &cpoptions = s:cpoptions_save
