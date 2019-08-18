@@ -133,7 +133,7 @@ endfunction
 
 
 " --- Plugin default mappings ---
-" Workaround: Calling s:window.background() here occurs E316 Error.
+" Workaround: Calling s:window.background() here occurs E315 Error.
 " (Ref: https://github.com/vim-jp/issues/issues/1300)
 " So, we call s:window.background() a bit later by using timer.
 function! s:_nmap_select() abort
