@@ -12,6 +12,7 @@ function! s:__init__() abort
   function! s:_buf.create() abort
     if self.winid == 0
       let self.winid = popup_create('', {'callback': self.on_close})
+      call popup_hide(self.winid)
 
       " Built-in <ESC>
       " XXX: I don't know why but if remove `col("$") != 1`, this mapping
