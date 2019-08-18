@@ -203,6 +203,7 @@ endfunction
 " Call matcher function asynchronously by using timer.
 function! s:_trigger_matcher(items) abort
   if s:getchar.get_input() ==# ''
+    call s:_pause_matcher()
     call s:_set_completion(a:items)
     return
   endif
@@ -218,7 +219,7 @@ endfunction
 
 function! s:_call_matcher(timer) abort
   if empty(s:matcher_handler.items_queue) || !gram#is_active()
-    call timer_pause(s:matcher_handler.timer_id, 1)
+    call s:_pause_matcher()
     return
   endif
 
@@ -226,6 +227,11 @@ function! s:_call_matcher(timer) abort
   if s:matcher.invoke_matcher(item)
     call s:_add_completion(item)
   endif
+endfunction
+
+function! s:_pause_matcher() abort
+  let s:matcher_handler.items_queue = []
+  call timer_pause(s:matcher_handler.timer_id, 1)
 endfunction
 
 function! s:_set_completion(items) abort

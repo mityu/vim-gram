@@ -273,7 +273,6 @@ TODO                                                *gram-todo*
 KNOWN-ISSUES                                        *gram-known-issues*
 
 * Screen doesn't scroll.
-* Sometimes duplicates completion items.
 
 
 ==============================================================================
