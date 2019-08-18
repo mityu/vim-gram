@@ -15,7 +15,7 @@ function! s:__init__() abort
   const s:GetOption = gram#module#import('custom').get_option
   const s:RequestRedraw = gram#module#import('impl').request_redraw
 
-  const s:PopupHeight = {-> min([max([&lines * 3 / 4, 35]), &lines - 3])}
+  const s:PopupHeight = {-> min([max([&lines * 3 / 4, 35]), &lines - 6])}
   const s:PopupWidth = {-> min([max([&columns / 2, 90]), &columns])}
   const s:completion_options = {
         \ 'pos': {-> 'center'},
