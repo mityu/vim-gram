@@ -131,14 +131,25 @@ endfunction
 
 
 " --- Plugin default mappings ---
+" Workaround: Calling s:window.background() here occurs E316 Error.
+" (Ref: https://github.com/vim-jp/issues/issues/1300)
+" So, we call s:window.background() a bit later by using timer.
 function! s:_nmap_select() abort
-  call s:window.background(s:window.execute_func({-> line('.') - 1}))
+  call timer_start(0, funcref(
+        \ 's:_callback_close_window', [s:window.execute_func({-> line('.') - 1})]
+        \ ), {'repeat': 1})
   return ''
 endfunction
 
 function! s:_nmap_quit() abort
-  call s:window.background()
+  call timer_start(0, funcref(
+        \ 's:_callback_close_window', [-1]),
+        \ {'repeat': 1})
   return ''
+endfunction
+
+function! s:_callback_close_window(selected_idx, timer_id) abort
+  call s:window.background(a:selected_idx)
 endfunction
 
 let &cpoptions = s:cpoptions_save
