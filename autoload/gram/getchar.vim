@@ -14,8 +14,8 @@ function! s:__init__() abort
   const s:plugmaps = {
        \ 'j': '["j", "gg"][line(".") == line("$")]',
        \ 'k': '["k", "G"][line(".") == 1]',
-       \ "\<CR>": printf('<SNR>%d__nmap_select()', s:SNR()),
-       \ 'q': printf('<SNR>%d__nmap_quit()', s:SNR()),
+       \ "\<CR>": s:_bind_func('_nmap_select()'),
+       \ 'q': s:_bind_func('_nmap_quit()'),
        \ }
 
   let s:mode = 'n'
@@ -25,8 +25,10 @@ function! s:__on_close__() abort
   let s:mode = 'n'
 endfunction
 
-function! s:SNR() abort
-  return matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\zeSNR$')
+function! s:_bind_func(func) abort
+  return printf('<SNR>%d_',
+        \ matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\ze_bind_func$')) ..
+        \ a:func
 endfunction
 
 function! s:define_plugmaps() abort

@@ -8,7 +8,7 @@ function! s:__init__() abort
   const s:getchar = gram#module#import('getchar')
   const s:null_input = {'text': '', 'col': 1, 'text_save': ''}
   let s:input = copy(s:null_input)
-  const s:plug_ESC = printf("\<C-r>=<SNR>%d__plug_ESC()\<CR>", s:SNR())
+  const s:plug_ESC = printf("\<C-r>=<SNR>%d__plug_ESC()\<CR>", s:_SNR())
 
   let s:_buf = {'winid': 0}
   function! s:_buf.create() abort
@@ -56,8 +56,8 @@ function! s:__on_close__() abort
   call s:_buf.close()
 endfunction
 
-function! s:SNR() abort
-  return matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\zeSNR$')
+function! s:_SNR() abort
+  return matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\ze_SNR$')
 endfunction
 
 function! s:get_input_info(...) abort
