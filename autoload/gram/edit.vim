@@ -2,11 +2,13 @@ scriptversion 3
 let s:cpoptions_save = &cpoptions
 set cpoptions&vim
 
+
 function! s:__init__() abort
   const s:window = gram#module#import('window')
   const s:getchar = gram#module#import('getchar')
-  const s:null_input = {'text': '', 'col_idx': 0, 'text_save': ''}
+  const s:null_input = {'text': '', 'col': 1, 'text_save': ''}
   let s:input = copy(s:null_input)
+  const s:plug_ESC = printf("\<C-r>=<SNR>%d__plug_ESC()\<CR>", s:SNR())
 
   let s:_buf = {'winid': 0}
   function! s:_buf.create() abort
@@ -15,12 +17,9 @@ function! s:__init__() abort
       call popup_hide(self.winid)
 
       " Built-in <ESC>
-      " XXX: I don't know why but if remove `col("$") != 1`, this mapping
-      " doesn't work.
-      call self.execute('inoremap <buffer> <expr> <Plug>(ESC) ' ..
-            \ '"\<ESC>" .. ["l", ""][col(".") == 1 && col("$") != 1]')
+      call self.execute('inoremap <buffer> <Plug>(ESC) <ESC>')
 
-      " Plugin <ESC>
+      " <ESC> for plugin
       call self.execute('inoremap <buffer> <expr> <ESC> ' ..
             \ string(get(s:getchar.stop_insert, 'func')) .. '()')
 
@@ -44,24 +43,21 @@ function! s:__init__() abort
     endtry
   endfunction
   function! s:_buf.ex_normal(keys) abort
-    call self.execute('normal ' .. a:keys)
-  endfunction
-  function! s:_buf.set_state(text, col) abort
     call self.execute([
-          \ printf('call setline(1, %s)', string(a:text)),
-          \ printf('call cursor(1, %s)', a:col)
+          \ printf('call setline(1, %s)', string(s:input.text)),
+          \ printf('call cursor(1, %s)', s:input.col),
+          \ 'normal ' .. a:keys
           \ ])
-  endfunction
-  function! s:_buf.get_state() abort
-    return eval(split(
-          \ self.execute('echon {"text": getline(1), "col": col(".")}'),
-          \ "\n")[0])
   endfunction
 endfunction
 
 function! s:__on_close__() abort
   let s:input = copy(s:null_input)
   call s:_buf.close()
+endfunction
+
+function! s:SNR() abort
+  return matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\zeSNR$')
 endfunction
 
 function! s:get_input_info(...) abort
@@ -89,13 +85,19 @@ function! s:cancel() abort
 endfunction
 
 function! s:insert_char(c) abort
-  call s:_ex_normal('i' .. a:c .. "\<Plug>(ESC)")
+  call s:_ex_normal('i' .. a:c .. s:plug_ESC)
   call s:show_cursor()
+endfunction
+
+function! s:_plug_ESC() abort
+  let s:input.text = getline(1)
+  let s:input.col = col('.')
+  return "\<Plug>(ESC)"
 endfunction
 
 function! s:show_cursor() abort
   if s:getchar.get_mode() ==# 'i'
-    call s:window.show_cursor(s:input.col_idx + 1)
+    call s:window.show_cursor(s:input.col)
   endif
 endfunction
 
@@ -103,11 +105,7 @@ function! s:_ex_normal(keys) abort
   let virtualedit_save = &virtualedit
   set virtualedit=onemore
   try
-    call s:_buf.set_state(s:input.text, s:input.col_idx + 1)
     call s:_buf.ex_normal(a:keys)
-    let state = s:_buf.get_state()
-    let s:input.col_idx = state.col - 1
-    let s:input.text = state.text
   finally
     let &virtualedit = virtualedit_save
   endtry
