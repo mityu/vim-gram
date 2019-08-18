@@ -70,7 +70,9 @@ function! s:_evaluate_keys_i(keys) abort
     call s:cancel_insert()
   else
     call s:edit.insert_char(a:keys)
-    call s:_insert_on_changed()
+    if s:mode ==# 'i'
+      call s:_insert_on_changed()
+    endif
   endif
 endfunction
 
