@@ -21,7 +21,6 @@ function! s:__init__() abort
 endfunction
 
 function! s:__on_close__() abort
-  let s:source_config = {}
   let s:context = {}
   call s:custom.remove_source_options()
 endfunction
@@ -102,12 +101,13 @@ function! s:select(config, options) abort
   call inputrestore()
   call s:window.background()
 
-  if has_key(s:source_config, 'callback')
+  if has_key(s:source_config, 'callback') && !empty(s:selected_item)
     call call(s:source_config.callback, [deepcopy(s:selected_item)])
   endif
   try
     return deepcopy(s:selected_item)
   finally
+    let s:source_config = {}
     let s:selected_item = {}  " Clear selected item
   endtry
 endfunction
