@@ -187,6 +187,10 @@ multi_regexp
     be separated with spaces.  To include spaces in patterns, please escape
     them with "\".
 
+enable_nmapclear  (Default: 1)
+    |Number| or |Boolean|.
+    If this value is true, all mappings except this plugin's are cleared.
+
 ------------------------------------------------------------------------------
 AUTOCMD                                           *gram-autocmd*
 

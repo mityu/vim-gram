@@ -52,6 +52,15 @@ function! s:__on_close__() abort
   call popup_close(s:prompt_winID)
 endfunction
 
+function! s:_mapclear_buffer() abort
+  nmapclear <buffer>
+  let keys = map(split(execute('nmap'), "\n"),
+        \ {_, line -> matchstr(line, '^\a*\s\+\zs\S\+\ze\s\+')})
+  for key in keys
+    execute 'nnoremap <buffer> <nowait>' key key
+  endfor
+endfunction
+
 function! s:foreground() abort
   let s:completion_winID =
         \ popup_create([''], map(deepcopy(s:completion_options), 'v:val()'))
@@ -63,6 +72,11 @@ function! s:foreground() abort
         \ {'line': pos.line - 2, 'col': pos.col})
 
   call s:setvar('&cursorline', 1)
+
+  if s:GetOption('enable_nmapclear')
+    call s:execute_func({-> s:_mapclear_buffer()})
+  endif
+
   call gram#module#import('getchar').define_plugmaps()
 endfunction
 

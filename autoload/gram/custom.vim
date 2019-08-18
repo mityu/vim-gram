@@ -18,6 +18,7 @@ function! s:__init__() abort
         \ 'prompt': '>> ',
         \ 'force_refresh': 0,
         \ 'matcher': 'multi_regexp',
+        \ 'enable_nmapclear': 1,
         \ }
 endfunction
 
