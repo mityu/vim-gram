@@ -10,8 +10,8 @@ if !exists('s:loaded')
 endif
 
 function! gram#source#matcher#multi_regexp#on_input(input) abort
-  let s:matchers = split(a:input, s:NON_ESCAPED_SPACE)
-  if a:input ==# ''
+  let s:matchers = filter(split(a:input, s:NON_ESCAPED_SPACE), 'v:val !=# ""')
+  if empty(s:matchers)
     call gram#highlight_match('')
   else
     call gram#highlight_match('\c' .. join(s:matchers, '\|'))
