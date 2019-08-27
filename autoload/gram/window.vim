@@ -12,7 +12,7 @@ function! s:__init__() abort
         \ }
 
   const s:message = gram#module#import('message')
-  const s:GetOption = gram#module#import('custom').get_option
+  const s:GetOption = gram#module#import('option').get_option
   const s:RequestRedraw = gram#module#import('impl').request_redraw
 
   const s:PopupHeight = {-> min([max([&lines * 3 / 4, 35]), &lines - 6])}

@@ -4,7 +4,6 @@ set cpoptions&vim
 
 function! s:__init__() abort
   const s:window = gram#module#import('window')
-  const s:custom = gram#module#import('custom')
   const s:mapping = gram#module#import('mapping')
   const s:impl = gram#module#import('impl')
   const s:edit = gram#module#import('edit')

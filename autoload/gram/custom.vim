@@ -10,16 +10,7 @@ function! s:__init__() abort
   const s:RegisterMatcher = gram#module#import('matcher').register
   const s:message = gram#module#import('message')
   const s:mapping = gram#module#import('mapping')
-
-  let s:user_option = {}
-  let s:source_option = {}
-  const s:default_option = {
-        \ 'statusline': '%n(%i/%c)',
-        \ 'prompt': '>> ',
-        \ 'force_refresh': 0,
-        \ 'matcher': 'multi_regexp',
-        \ 'enable_nmapclear': 1,
-        \ }
+  const s:option = gram#module#import('option')
 endfunction
 
 function! gram#custom#noremap(mode, lhs, rhs) abort
@@ -34,29 +25,16 @@ function! gram#custom#unmap(mode, lhs) abort
   call s:mapping.unmap(a:mode, a:lhs)
 endfunction
 
-function! gram#custom#option(name, value) abort
-  let s:user_option[a:name] = a:value
+function! gram#custom#set_option(name, value) abort
+  call s:option.user_option_set(a:name, a:value)
+endfunction
+
+function! gram#custom#get_option(name) abort
+  return s:option.user_option_get(a:name)
 endfunction
 
 function! gram#custom#matcher_add(name, matcher, on_input) abort
   call s:RegisterMatcher(a:name, a:matcher, a:on_input)
-endfunction
-
-function! s:get_option(name) abort
-  if has_key(s:user_option, a:name)
-    return s:user_option[a:name]
-  elseif has_key(s:source_option, a:name)
-    return s:source_option[a:name]
-  endif
-  return s:default_option[a:name]
-endfunction
-
-function! s:set_source_options(options) abort
-  let s:source_option = deepcopy(a:options)
-endfunction
-
-function! s:remove_source_options() abort
-  let s:source_option = {}
 endfunction
 
 call s:__init__()

@@ -3,7 +3,7 @@ let s:cpoptions_save = &cpoptions
 set cpoptions&vim
 
 function! s:__init__() abort
-  const s:custom = gram#module#import('custom')
+  const s:option = gram#module#import('option')
   const s:getchar = gram#module#import('getchar')
   const s:message = gram#module#import('message')
   const s:window = gram#module#import('window')
@@ -22,7 +22,6 @@ endfunction
 
 function! s:__on_close__() abort
   let s:context = {}
-  call s:custom.remove_source_options()
 endfunction
 
 function! s:set_selected_item(selected_idx) abort
@@ -75,22 +74,20 @@ function! s:select(config, options) abort
   "   return {}
   " endif
 
-  if !s:matcher.set(s:custom.get_option('matcher'))
+  if !s:matcher.set(s:option.get_option('matcher'))
     return {}
   endif
 
   for [key, Value] in items(a:config)  " 'Value' might be Funcref.
     let s:source_config[key] = Value
   endfor
+  call s:option.source_option_set(a:options)
 
-  let source_options = {}
   if !has_key(a:config, 'completefunc')
     let s:source_config.completefunc =
           \ {-> gram#set_items(s:source_config.items)}
-    let source_options.force_refresh = 0
+    call s:option.source_opton_add({'force_refresh': 0})
   endif
-
-  call s:custom.set_source_options(extend(a:options, source_options, 'force'))
 
   " Set default colors
   highlight default link gramMatch Number
@@ -193,7 +190,7 @@ function! s:generate_statusline() abort
         \ '%i': s:window.execute_func({-> line('.') - empty(gram#get_items('matched'))}),
         \ }
   return substitute(
-        \ s:custom.get_option('statusline'),
+        \ s:option.get_option('statusline'),
         \ join(keys(modifiers), '\|'),
         \ '\=modifiers[submatch(0)]',
         \ 'g'
@@ -202,7 +199,7 @@ endfunction
 
 function! s:on_input_changed(input) abort
   call s:matcher.invoke_on_input(a:input)
-  if s:custom.get_option('force_refresh')
+  if s:option.get_option('force_refresh')
     call s:invoke_completefunc(a:input)
   endif
   call s:window.display_input_string(a:input)
