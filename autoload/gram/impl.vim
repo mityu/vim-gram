@@ -86,7 +86,7 @@ function! s:select(config, options) abort
   if !has_key(a:config, 'completefunc')
     let s:source_config.completefunc =
           \ {-> gram#set_items(s:source_config.items)}
-    call s:option.source_opton_add({'force_refresh': 0})
+    call s:option.source_option_add({'force_refresh': 0})
   endif
 
   " Set default colors
