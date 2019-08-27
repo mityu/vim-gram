@@ -12,9 +12,11 @@ CUSTOMIZE                     |gram-customize|
   OPTIONS                     |gram-options|
   AUTOCMD                     |gram-autocmd|
   COLORS                      |gram-color|
+  BUILT-IN-MATCHERS           |gram-built-in-matchers|
   CREATE-MATCHERS             |gram-create-matchers|
   ITEMS                       |gram-item|
 CONFIGURATION-EXAMPLES        |gram-configuration-examples|
+SOURCE-EXAMPLES               |gram-source-examples|
 TODO                          |gram-todo|
 KNOWN-ISSUES                  |gram-known-issues|
 
@@ -85,16 +87,26 @@ gram#add_items({items})
     Add {items} to base items.
 
                                                     *gram#get_items()*
-gram#get_items()
-    Returns presently shown filtered items.
-    Returned items are list of dictionary and each dictionary has these
-    entries: "word", "abbr", "menu", and "user_data".  Unspecified entry's
-    value will be ""(an empty string).
+gram#get_items([{kind}])
+    Return a list of items of {kind}.  What you can specify as {kind} are:
+    "base"          All of the items
+    "matched"       Presently shown items
+
+    If {kind} is omitted, return a dictionary with items of "base" and
+    "matched".
+    Example: >
+        echo gram#get_items()
+        " => {'base': [{"base" items here...}],
+        "       'matched': [{"matched" items here...}]}
+<
+
+    Each dictionary item is always structured into |gram-item|, and unspecified
+    entry's value will be ""(an empty string).
 
                                                     *gram#is_active()*
 gram#is_active()
     Returns 1 if gram is active; otherwise, returns 0.  This function is
-    useful when you make asyncronous matchers or completefunc.
+    useful when you make asynchronous matchers or completefunc.
 
                                                     *gram-mappings*
                                                     *gram#custom#noremap()*
@@ -116,7 +128,7 @@ gram#custom#map({mode}, {lhs}, {rhs})
     " Quit gram.vim from insert mode via <C-e>.
     call gram#custom#noremap('i', '<C-e>', ['<ESC>', 'q'])
 <
-    In |gram.vim|'s window, in normal/inesrt mode, you can use Vim's built-in
+    In |gram.vim|'s window, in normal/insert mode, you can use Vim's built-in
     mappings without [count] except for the following mappings:
 
     normal mode
@@ -162,7 +174,7 @@ gram#custom#matcher_add({name}, {matcher}, {on-input})
 OPTIONS                                           *gram-options*
 
                                                 *gram-option-statusline*
-statusline  (Default: "%n")
+statusline  (Default: "%n(%i/%c)")
     |String|.
     You can use the following modifiers:
         %n  the source name.  Becomes "[No name]" if it's omitted.
@@ -185,13 +197,8 @@ force_refresh  (Default: 0)
                                                 *gram-option-prompt*
 matcher  (Default: "multi_regexp")
     |String|.
-    Specify a matcher to use.
-
-The following is list of built-in matchers:
-multi_regexp
-    You can specify multi regexp patterns to filter candidates.  Patterns will
-    be separated with spaces.  To include spaces in patterns, please escape
-    them with "\".
+    Specify a matcher to use.  See |gram-built-in-matchers| to know available
+    built-in matchers.
 
 enable_nmapclear  (Default: 1)
     |Number| or |Boolean|.
@@ -223,6 +230,14 @@ You can overwrite the default color settings just by setting colors via
 
 gramMatch       (Default: Number highlight group)
     The color to show matched strings.
+
+------------------------------------------------------------------------------
+BUILT-IN-MATCHERS                                   *gram-built-in-matchers*
+
+multi_regexp
+    You can specify multi regexp patterns to filter candidates.  Patterns will
+    be separated with spaces.  To include spaces in patterns, please escape
+    them with "\".
 
 ------------------------------------------------------------------------------
 CREATE-MATCHERS                                      *gram-create-matchers*
@@ -266,6 +281,17 @@ CONFIGURATION-EXAMPLES                          *gram-configuration-examples*
     call gram#custom#noremap('i', '<C-a>', '<C-o>0')
     call gram#custom#noremap('i', '<C-e>', '<C-o>$')
 <
+
+==============================================================================
+SOURCE-EXAMPLES                                   *gram-source-examples*
+
+- Simple MRU(Most Recently Used) source using |v:oldfiles|. >
+    call gram#select({
+        \ 'name': 'MRU',
+        \ 'items': v:oldfiles,
+        \ 'callback': {item -> execute('edit ' . fnameescape(item.word))}
+        \ })
+
 
 ==============================================================================
 TODO                                                *gram-todo*
