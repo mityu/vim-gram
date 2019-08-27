@@ -12,11 +12,11 @@ function! s:__init__() abort
 
   " These mappings are defined with <expr>.
   const s:plugmaps = {
-       \ 'j': '["j", "gg"][line(".") == line("$")]',
-       \ 'k': '["k", "G"][line(".") == 1]',
-       \ "\<CR>": s:_bind_func('_nmap_select()'),
-       \ 'q': s:_bind_func('_nmap_quit()'),
-       \ }
+      \ 'j': '["j", "gg"][line(".") == line("$")]',
+      \ 'k': '["k", "G"][line(".") == 1]',
+      \ "\<CR>": s:_bind_func('_nmap_select()'),
+      \ 'q': s:_bind_func('_nmap_quit()'),
+      \ }
 
   let s:mode = 'n'
 endfunction
@@ -26,8 +26,7 @@ function! s:__on_close__() abort
 endfunction
 
 function! s:_bind_func(func) abort
-  return printf('<SNR>%d_',
-        \ matchstr(expand('<sfile>'), '\zs<SNR>\zs\d\+_\ze_bind_func$')) ..
+  return matchstr(expand('<sfile>'), '\zs<SNR>\d\+_\ze_bind_func$') ..
         \ a:func
 endfunction
 
