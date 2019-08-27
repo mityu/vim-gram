@@ -47,10 +47,16 @@ gram#select({config} [,{options}])
     returns {} (an empty dictionary).
     {config} must have the following entries:
                                                 *gram#select()-completefunc*
-    - completefunc (Necessary)
+    - completefunc (Necessary if items entry is omitted)
         |Funcref| or |String| of a function to list items.  The argument is
         the user input and this function must return items to select.  See
         |gram-options-force_refresh| to know when this function is called.
+
+    - items (Optional)
+        |List| of items to filter.  You can use this entry as alternative to
+        |gram#select()-completefunc|.
+        NOTE: If both of completefunc and items entries are specified, only
+        completefunc entry is used.
 
     - name (Optional)
         |String|. The source name.

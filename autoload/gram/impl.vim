@@ -61,14 +61,19 @@ function! s:select(config, options) abort
     call s:_init()
   endif
 
-  let requirements = ['completefunc']
-  let entries = keys(a:config)
-  let missing_entries = filter(requirements, 'index(entries, v:val) == -1')
-  if !empty(missing_entries)
+  if !(has_key(a:config, 'completefunc') || has_key(a:config, 'items'))
     call s:message.echomsg_error(
-          \ 'Not enough config entries: Missing ' .. string(missing_entries))
+          \'Not enough config entries: Missing "completefunc"')
     return {}
   endif
+  " let requirements = []
+  " let entries = keys(a:config)
+  " let missing_entries = filter(requirements, 'index(entries, v:val) == -1')
+  " if !empty(missing_entries)
+  "   call s:message.echomsg_error(
+  "        \ 'Not enough config entries: Missing ' .. string(missing_entries))
+  "   return {}
+  " endif
 
   if !s:matcher.set(s:custom.get_option('matcher'))
     return {}
@@ -77,7 +82,15 @@ function! s:select(config, options) abort
   for [key, Value] in items(a:config)  " 'Value' might be Funcref.
     let s:source_config[key] = Value
   endfor
-  call s:custom.set_source_options(a:options)
+
+  let source_options = {}
+  if !has_key(a:config, 'completefunc')
+    let s:source_config.completefunc =
+          \ {-> gram#set_items(s:source_config.items)}
+    let source_options.force_refresh = 0
+  endif
+
+  call s:custom.set_source_options(extend(a:options, source_options, 'force'))
 
   " Set default colors
   highlight default link gramMatch Number
