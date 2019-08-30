@@ -16,6 +16,10 @@ function! s:__init__() abort
       let self.winid = popup_create('', {'callback': self.on_close})
       call popup_hide(self.winid)
 
+      if gram#module#import('option').get_option('enable_imapclear')
+        call self.execute('call s:_mapclear_buffer()')
+      endif
+
       " Built-in <ESC>
       call self.execute('inoremap <buffer> <Plug>(ESC) <ESC>')
 
@@ -109,6 +113,15 @@ function! s:_ex_normal(keys) abort
   finally
     let &virtualedit = virtualedit_save
   endtry
+endfunction
+
+function! s:_mapclear_buffer() abort
+  imapclear <buffer>
+  let keys = map(split(execute('imap'), "\n"),
+        \ {_, line -> matchstr(line, '^\a*\s\+\zs\S\+\ze\s\+')})
+  for key in keys
+    execute 'inoremap <buffer> <nowait>' key key
+  endfor
 endfunction
 
 let &cpoptions = s:cpoptions_save

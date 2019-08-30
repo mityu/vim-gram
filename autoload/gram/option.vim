@@ -13,6 +13,7 @@ function! s:__init__() abort
         \ 'force_refresh': 0,
         \ 'matcher': 'multi_regexp',
         \ 'enable_nmapclear': 1,
+        \ 'enable_imapclear': 1,
         \ }
 endfunction
 

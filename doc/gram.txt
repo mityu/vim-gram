@@ -194,15 +194,23 @@ force_refresh  (Default: 0)
     If this option is set to false, |gram#launch()-completefunc| is called
     once just after |gram.vim| opens its window.
 
-                                                *gram-option-prompt*
+                                                *gram-option-matcher*
 matcher  (Default: "multi_regexp")
     |String|.
     Specify a matcher to use.  See |gram-built-in-matchers| to know available
     built-in matchers.
 
+                                                *gram-option-nmapclear*
 enable_nmapclear  (Default: 1)
     |Number| or |Boolean|.
-    If this value is true, all mappings except this plugin's are cleared.
+    If this value is true, all mappings except for normal-mode this plugin's
+    are cleared.
+
+                                                *gram-option-imapclear*
+enable_imapclear  (Default: 1)
+    |Number| or |Boolean|.
+    If this value is true, all mappings for insert-mode except this plugin's
+    are cleared.
 
 ------------------------------------------------------------------------------
 AUTOCMD                                           *gram-autocmd*
