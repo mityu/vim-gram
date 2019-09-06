@@ -18,10 +18,50 @@ function! s:__init__() abort
       \ }
 
   let s:mode = 'n'
+
+  let s:_getchar = {'winid': 0, 'is_active': 0}
+  function! s:_getchar.start() abort
+    if self.winid != 0
+      call s:message.echomsg_warning('_getchar.start(): popup duplicates.')
+      return
+    endif
+    let self.is_active = 1
+    let self.winid = popup_create('', {
+          \ 'mapping': 0,
+          \ 'filter': self.filter,
+          \ 'callback': self.callback,
+          \ 'pos': 'center',
+          \ })
+  endfunction
+  function! s:_getchar.callback(winid, idx) abort
+    let self.winid = 0
+    if self.is_active
+      call self.start()
+      call self.safe_keytype_call('s:evaluate_keys', [["\<C-c>"]])
+    endif
+  endfunction
+  function! s:_getchar.filter(winid, char) abort
+    call self.safe_keytype_call(s:mapping.resolve, [[a:char]])
+    call s:impl.draw_statusline()
+    return 1
+  endfunction
+  function! s:_getchar.finish() abort
+    let self.is_active = 0
+    if self.winid != 0
+      call popup_close(self.winid)
+    endif
+  endfunction
+  function! s:_getchar.safe_keytype_call(function, args) abort
+    " NOTE: Key inputs by :normal command are handled by filter.
+    call popup_setoptions(self.winid, {'mapping': 1, 'filter': {-> 0}})
+    call call(a:function, a:args)
+    call popup_setoptions(self.winid, {'mapping': 0, 'filter': self.filter})
+  endfunction
 endfunction
 
 function! s:__on_close__() abort
   let s:mode = 'n'
+  call s:_getchar.finish()
 endfunction
 
 function! s:_bind_func(func) abort
@@ -35,29 +75,21 @@ function! s:define_plugmaps() abort
   call s:window.execute(cmd)
 endfunction
 
-function! s:process() abort
-  let input = []
-  while getchar(1)
-    let c = getchar()
-    if type(c) == v:t_number
-      let c = nr2char(c)
-    endif
-    call add(input, c)
-  endwhile
-  if empty(input)
-    return
-  endif
-  call s:mapping.resolve(input)
-  call s:impl.request_redraw()
+function! s:start() abort
+  call s:_getchar.start()
+endfunction
+
+function! s:finish() abort
+  call s:_getchar.finish()
 endfunction
 
 function! s:evaluate_keys(key_sequences) abort
   for key_sequence in a:key_sequences
-    call s:_evaluate_keys_{s:mode}(key_sequence)
+    call s:_evaluate_key_{s:mode}(key_sequence)
   endfor
 endfunction
 
-function! s:_evaluate_keys_n(keys) abort
+function! s:_evaluate_key_n(keys) abort
   if a:keys ==# "\<C-c>"
     call s:window.background()
   else
@@ -65,7 +97,7 @@ function! s:_evaluate_keys_n(keys) abort
   endif
 endfunction
 
-function! s:_evaluate_keys_i(keys) abort
+function! s:_evaluate_key_i(keys) abort
   if a:keys ==# "\<C-c>"
     call s:cancel_insert()
   else

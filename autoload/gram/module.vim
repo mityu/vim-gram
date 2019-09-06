@@ -47,6 +47,8 @@ function! gram#module#on_close(winid, selected_idx) abort
   for Callback in values(s:module_callbacks)
     call Callback()
   endfor
+
+  call gram#module#import('impl').invoke_callback()
 endfunction
 
 let &cpoptions = s:cpoptions_save

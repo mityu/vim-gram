@@ -13,7 +13,6 @@ function! s:__init__() abort
 
   const s:message = gram#module#import('message')
   const s:GetOption = gram#module#import('option').get_option
-  const s:RequestRedraw = gram#module#import('impl').request_redraw
 
   const s:PopupHeight = {-> min([max([&lines * 3 / 4, 35]), &lines - 6])}
   const s:PopupWidth = {-> min([max([&columns / 2, 90]), &columns])}
@@ -94,7 +93,6 @@ function! s:display_input_string(input) abort
   " highlight the end of line on popup-windows).
   call setbufline(winbufnr(s:prompt_winID), 1,
         \ s:GetOption('prompt') .. a:input .. ' ')
-  call s:RequestRedraw()
 endfunction
 
 function! s:hide_cursor() abort
@@ -128,17 +126,14 @@ endfunction
 
 function! s:setline(line, expr) abort
   call call('setbufline', [s:get_bufnr(), a:line, a:expr])
-  call s:RequestRedraw()
 endfunction
 
 function! s:append(line, expr) abort
   call call('appendbufline', [s:get_bufnr(), a:line, a:expr])
-  call s:RequestRedraw()
 endfunction
 
 function! s:deleteline(first, ...) abort
   call call('deletebufline', [s:get_bufnr(), a:first] + a:000)
-  call s:RequestRedraw()
 endfunction
 
 function! s:_matchdelete(kind, winid) abort
@@ -162,7 +157,6 @@ function! s:highlight_match(pattern) abort
   catch
     " Ignore.
   endtry
-  call s:RequestRedraw()
 endfunction
 
 function! s:delete_completion() abort
