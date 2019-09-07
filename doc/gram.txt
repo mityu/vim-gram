@@ -30,7 +30,7 @@ FEATURES                                            *gram-features*
 ==============================================================================
 REQUIREMENTS                                       *gram-requirements*
 
-- Vim8.1.1539 or later
+- Vim8.1.1799 or later
 - +popup
 - +timer
 
@@ -45,8 +45,7 @@ FUNCTIONS                                           *gram-functions*
 
                                                     *gram#select()*
 gram#select({config} [,{options}])
-    Launch this plugin and returns the selected item.  If nothing is selected,
-    returns {} (an empty dictionary).
+    Launch this plugin to select an item.
     {config} must have the following entries:
                                                 *gram#select()-completefunc*
     - completefunc (Necessary if items entry is omitted)

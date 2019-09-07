@@ -15,7 +15,6 @@ function! s:__init__() abort
   let s:default_option = {}
   let s:context = {}
   let s:source_config = {}
-  let s:need_redraw = v:false
   let s:matcher_handler = {'timer_id': 0, 'items_queue': []}
   let s:selected_item = {}
 endfunction
@@ -63,7 +62,7 @@ function! s:select(config, options) abort
   if !(has_key(a:config, 'completefunc') || has_key(a:config, 'items'))
     call s:message.echomsg_error(
           \'Not enough config entries: Missing "completefunc"')
-    return {}
+    return 0
   endif
   " let requirements = []
   " let entries = keys(a:config)
@@ -75,7 +74,7 @@ function! s:select(config, options) abort
   " endif
 
   if !s:matcher.set(s:option.get_option('matcher'))
-    return {}
+    return 0
   endif
 
   for [key, Value] in items(a:config)  " 'Value' might be Funcref.
@@ -99,43 +98,18 @@ function! s:select(config, options) abort
   call s:window.foreground()
   call s:window.display_input_string('')
   call s:invoke_completefunc('')
-  redraw!
+  call s:draw_statusline()
+  call s:getchar.start()
 
-  call inputsave()
-  try
-    call s:_main_loop()  " Loop until selecting is canceled/finished.
-  catch
-    call s:message.echomsg_error(expand('<sfile>') .. v:exception)
-  endtry
+  return 1
+endfunction
 
-  call inputrestore()
-  call s:window.background()
-
+function! s:invoke_callback() abort
   if has_key(s:source_config, 'callback') && !empty(s:selected_item)
     call call(s:source_config.callback, [deepcopy(s:selected_item)])
   endif
-  try
-    return deepcopy(s:selected_item)
-  finally
-    let s:source_config = {}
-    let s:selected_item = {}  " Clear selected item
-  endtry
-endfunction
-
-function! s:_main_loop() abort
-  while s:is_active()
-    try
-      call s:getchar.process()
-      call s:window.set_statusline(s:generate_statusline())
-      if s:need_redraw
-        redraw!
-        let s:need_redraw = v:false
-      endif
-      sleep 75m  " Let timers/jobs work.
-    catch /^Vim:Interrupt$/
-      call s:getchar.evaluate_keys(["\<C-c>"])
-    endtry
-  endwhile
+  let s:selected_item = {}
+  let s:source_config = {}
 endfunction
 
 function! s:_get_highlight_status(target) abort
@@ -183,6 +157,10 @@ function! s:invoke_completefunc(input) abort
   call call(s:source_config.completefunc, [a:input])
 endfunction
 
+function! s:draw_statusline() abort
+  call s:window.set_statusline(s:generate_statusline())
+endfunction
+
 function! s:generate_statusline() abort
   const modifiers = {
         \ '%n': get(s:source_config, 'name', "[No name]"),
@@ -206,10 +184,6 @@ function! s:on_input_changed(input) abort
   call s:_trigger_matcher(s:get_items('base'))
 endfunction
 
-function! s:request_redraw() abort
-  let s:need_redraw = v:true
-endfunction
-
 " Call matcher function asynchronously by using timer.
 function! s:_trigger_matcher(items) abort
   if s:getchar.get_input() ==# ''
@@ -221,7 +195,7 @@ function! s:_trigger_matcher(items) abort
   let s:matcher_handler.items_queue = deepcopy(a:items)
   if s:matcher_handler.timer_id == 0
     let s:matcher_handler.timer_id =
-          \ timer_start(0, 's:_call_matcher', {'repeat': -1})
+          \ timer_start(0, funcref('s:_call_matcher'), {'repeat': -1})
   else
     call timer_pause(s:matcher_handler.timer_id, 0)
   endif
