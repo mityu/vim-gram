@@ -45,7 +45,7 @@ FUNCTIONS                                           *gram-functions*
 
                                                     *gram#select()*
 gram#select({config} [,{options}])
-    Launch this plugin to select item.
+    Launch this plugin to select an item.
     {config} must have the following entries:
                                                 *gram#select()-completefunc*
     - completefunc (Necessary if items entry is omitted)
