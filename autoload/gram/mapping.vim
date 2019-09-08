@@ -10,8 +10,6 @@ function! s:__init__() abort
 
   const s:map_node_base = {'rhs': {'key': 0, 'kind': ''}}
   let s:usermap = {'n': copy(s:map_node_base), 'i': copy(s:map_node_base)}
-
-  let s:key_queue = []
 endfunction
 
 function! s:map(mode, lhs, rhs) abort
@@ -69,58 +67,8 @@ function! s:_get_escaped_mapchar(key) abort
   return eval(printf('"%s"', '\' .. a:key))
 endfunction
 
-function! s:resolve(inputs) abort
-  call s:_resolve_impl(s:key_queue + a:inputs)
-endfunction
-
-function! s:_resolve_impl(inputs) abort
-  let s:key_queue = []
-  let queue = copy(a:inputs)
-
-  while !empty(queue)
-    let [rhs, queue] = s:_get_rhs(s:getchar.get_mode(), queue)
-    let count = 0
-    while rhs.kind ==# 'map'
-      let count += 1
-      if count > &maxmapdepth
-        call s:message.echomsg_error('recursive mapping')
-        return
-      endif
-      let [rhs, queue] = s:_get_rhs(s:getchar.get_mode(), rhs.key + queue)
-    endwhile
-    call s:getchar.evaluate_keys(rhs.key)
-  endwhile
-endfunction
-
-function! s:_get_rhs(mode, key_sequence) abort
-  let node = s:usermap[a:mode]
-  let lhs_length = 0
-  let rhs = {'data': {}, 'lhs_length': 0}
-  let nomap = 1
-
-  for key in a:key_sequence
-    let lhs_length += 1
-    if !has_key(node, key)
-      break
-    endif
-    let nomap = 0
-    let node = node[key]
-    if type(node.rhs.key) != v:t_number
-      let rhs.lhs_length = lhs_length
-      let rhs.data = node.rhs
-    endif
-  endfor
-  if nomap
-    return [{'key': [a:key_sequence[0]], 'kind': 'noremap'},
-          \ a:key_sequence[1 :]]
-  elseif len(keys(node)) >= 2
-    let s:key_queue = a:key_sequence
-    return [{'key': [], 'kind': 'noremap'}, []]
-  elseif empty(rhs.data)
-    return [{'key': a:key_sequence[: lhs_length], 'kind': 'noremap'},
-          \ a:key_sequence[lhs_length :]]
-  endif
-  return [rhs.data, a:key_sequence[rhs.lhs_length :]]
+function! s:get_usermap() abort
+  return s:usermap
 endfunction
 
 

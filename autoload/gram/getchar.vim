@@ -18,50 +18,53 @@ function! s:__init__() abort
       \ }
 
   let s:mode = 'n'
-
-  let s:_getchar = {'winid': 0, 'is_active': 0}
-  function! s:_getchar.start() abort
-    if self.winid != 0
-      call s:message.echomsg_warning('_getchar.start(): popup duplicates.')
-      return
-    endif
-    let self.is_active = 1
-    let self.winid = popup_create('', {
-          \ 'mapping': 0,
-          \ 'filter': self.filter,
-          \ 'callback': self.callback,
-          \ 'pos': 'center',
-          \ })
-  endfunction
-  function! s:_getchar.callback(winid, idx) abort
-    let self.winid = 0
-    if self.is_active
-      call self.start()
-      call self.safe_keytype_call('s:evaluate_keys', [["\<C-c>"]])
-    endif
-  endfunction
-  function! s:_getchar.filter(winid, char) abort
-    call self.safe_keytype_call(s:mapping.resolve, [[a:char]])
-    call s:impl.draw_statusline()
-    return 1
-  endfunction
-  function! s:_getchar.finish() abort
-    let self.is_active = 0
-    if self.winid != 0
-      call popup_close(self.winid)
-    endif
-  endfunction
-  function! s:_getchar.safe_keytype_call(function, args) abort
-    " NOTE: Key inputs by :normal command are handled by filter.
-    call popup_setoptions(self.winid, {'mapping': 1, 'filter': {-> 0}})
-    call call(a:function, a:args)
-    call popup_setoptions(self.winid, {'mapping': 0, 'filter': self.filter})
-  endfunction
+  let s:key_queue = []
 endfunction
 
 function! s:__on_close__() abort
   let s:mode = 'n'
   call s:_getchar.finish()
+endfunction
+
+if !exists('s:_getchar')
+  let s:_getchar = {'winid': 0, 'is_active': 0}
+endif
+function! s:_getchar.start() abort
+  if self.winid != 0
+    call s:message.echomsg_warning('_getchar.start(): popup duplicates.')
+    return
+  endif
+  let self.is_active = 1
+  let self.winid = popup_create('', {
+        \ 'mapping': 0,
+        \ 'filter': self.filter,
+        \ 'callback': self.callback,
+        \ 'pos': 'center',
+        \ })
+endfunction
+function! s:_getchar.callback(winid, idx) abort
+  let self.winid = 0
+  if self.is_active
+    call self.start()
+    call self.safe_keytype_call('s:_feed_nomap_keys', [["\<C-c>"]])
+  endif
+endfunction
+function! s:_getchar.filter(winid, char) abort
+  call self.safe_keytype_call('s:_evaluate_keys', [[a:char]])
+  call s:impl.draw_statusline()
+  return 1
+endfunction
+function! s:_getchar.finish() abort
+  let self.is_active = 0
+  if self.winid != 0
+    call popup_close(self.winid)
+  endif
+endfunction
+function! s:_getchar.safe_keytype_call(function, args) abort
+  " NOTE: Key inputs by :normal command are handled by filter.
+  call popup_setoptions(self.winid, {'mapping': 1, 'filter': {-> 0}})
+  call call(a:function, a:args)
+  call popup_setoptions(self.winid, {'mapping': 0, 'filter': self.filter})
 endfunction
 
 function! s:_bind_func(func) abort
@@ -83,32 +86,72 @@ function! s:finish() abort
   call s:_getchar.finish()
 endfunction
 
-function! s:evaluate_keys(key_sequences) abort
+function! s:_evaluate_keys(inputs) abort
+  call s:_evaluate_keys_impl(s:key_queue + a:inputs)
+endfunction
+
+function! s:_evaluate_keys_impl(inputs) abort
+  let s:key_queue = []
+  let queue = copy(a:inputs)
+
+  while !empty(queue)
+    let [rhs, queue] = s:_get_rhs(s:get_mode(), queue)
+    let count = 0
+    while rhs.kind ==# 'map'
+      let count += 1
+      if count > &maxmapdepth
+        call s:message.echomsg_error('recursive mapping')
+        return
+      endif
+      let [rhs, queue] = s:_get_rhs(s:get_mode(), rhs.key + queue)
+    endwhile
+    call s:_feed_nomap_keys(rhs.key)
+  endwhile
+endfunction
+
+function! s:_get_rhs(mode, key_sequence) abort
+  let node = s:mapping.get_usermap()[a:mode]
+  let lhs_length = 0
+  let rhs = {'data': {}, 'lhs_length': 0}
+  let nomap = 1
+
+  for key in a:key_sequence
+    let lhs_length += 1
+    if !has_key(node, key)
+      break
+    endif
+    let nomap = 0
+    let node = node[key]
+    if type(node.rhs.key) != v:t_number
+      let rhs.lhs_length = lhs_length
+      let rhs.data = node.rhs
+    endif
+  endfor
+  if nomap
+    return [{'key': [a:key_sequence[0]], 'kind': 'noremap'},
+          \ a:key_sequence[1 :]]
+  elseif len(keys(node)) >= 2
+    let s:key_queue = a:key_sequence
+    return [{'key': [], 'kind': 'noremap'}, []]
+  elseif empty(rhs.data)
+    return [{'key': a:key_sequence[: lhs_length], 'kind': 'noremap'},
+          \ a:key_sequence[lhs_length :]]
+  endif
+  return [rhs.data, a:key_sequence[rhs.lhs_length :]]
+endfunction
+
+function! s:_feed_nomap_keys(key_sequences) abort
   for key_sequence in a:key_sequences
-    call s:_evaluate_key_{s:mode}(key_sequence)
+    call s:_feed_nomap_keys_{s:mode}(key_sequence)
   endfor
 endfunction
 
-function! s:_evaluate_key_n(keys) abort
+function! s:_feed_nomap_keys_n(keys) abort
   if a:keys ==# "\<C-c>"
     call s:window.background()
-  else
-    call s:_safe_feedkeys(a:keys)
+    return
   endif
-endfunction
 
-function! s:_evaluate_key_i(keys) abort
-  if a:keys ==# "\<C-c>"
-    call s:cancel_insert()
-  else
-    call s:edit.insert_char(a:keys)
-    if s:mode ==# 'i'
-      call s:_insert_on_changed()
-    endif
-  endif
-endfunction
-
-function! s:_safe_feedkeys(keys) abort
   if a:keys ==# ''
     return
   endif
@@ -129,6 +172,18 @@ function! s:_safe_feedkeys(keys) abort
   finally
     call s:window.setvar('&modifiable', 1)
   endtry
+endfunction
+
+function! s:_feed_nomap_keys_i(keys) abort
+  if a:keys ==# "\<C-c>"
+    call s:cancel_insert()
+    return
+  endif
+
+  call s:edit.insert_char(a:keys)
+  if s:mode ==# 'i'
+    call s:_insert_on_changed()
+  endif
 endfunction
 
 function! s:start_insert() abort
