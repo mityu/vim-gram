@@ -62,7 +62,7 @@ gram#select({config} [,{options}])
     - name (Optional)
         |String|. The source name.
 
-    - callback (Optional)
+    - callback (Necessary)
         |Funcref| or |String| of a callback function.  This function is called
         only when the user select a item.  (If selecting is canceled, this
         function won't be called.)  The argument is the selected item.
