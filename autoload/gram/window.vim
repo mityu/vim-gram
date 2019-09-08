@@ -207,8 +207,8 @@ function! s:execute_func(Funcref) abort
   let eventignore_save = &eventignore
   set eventignore=all
   try
-    call win_execute(s:get_winID(), 'let s:execute_rettv = a:Funcref()')
-    return s:execute_rettv
+    call win_execute(s:get_winID(), 'let rettv = a:Funcref()')
+    return rettv
   finally
     let &eventignore = eventignore_save
   endtry
