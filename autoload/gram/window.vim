@@ -7,8 +7,8 @@ function! s:__init__() abort
   let s:completion_winID = s:null_winID
   let s:prompt_winID = s:null_winID
   let s:match_id = {
-        \ 'cursor': 0,
-        \ 'highlight': 0
+        \ 'cursor': -1,
+        \ 'highlight': -1
         \ }
 
   const s:message = gram#module#import('message')
@@ -40,8 +40,8 @@ endfunction
 
 function! s:__on_close__() abort
   " Cleawn up matches.
-  call s:_matchdelete('cursor', s:prompt_winID)
-  call s:_matchdelete('highlight', s:completion_winID)
+  call s:_matchdelete(s:match_id.cursor, s:prompt_winID)
+  call s:_matchdelete(s:match_id.highlight, s:completion_winID)
   call popup_close(s:prompt_winID)
 
   augroup gram-window
@@ -102,7 +102,7 @@ function! s:_adjust_position() abort
         \ 'minheight': height,
         \ })
   call popup_move(s:prompt_winID, {
-        \ 'line': line - 1,
+        \ 'line': line - 2,
         \ 'col': col,
         \ 'minwidth': width,
         \ 'maxwidth': width,
@@ -120,7 +120,7 @@ endfunction
 
 function! s:hide_cursor() abort
   if s:match_id.cursor != 0
-    call s:_matchdelete('cursor', s:prompt_winID)
+    call s:_matchdelete(s:match_id.cursor, s:prompt_winID)
   endif
 endfunction
 
@@ -129,7 +129,7 @@ function! s:show_cursor(col) abort
   let s:match_id.cursor = matchaddpos(
         \ '_gramCursor_',
         \ [[1, a:col + strlen(s:GetOption('prompt'))]],
-        \ 10, -1, {'window': s:prompt_winID})
+        \ 10, s:match_id.cursor, {'window': s:prompt_winID})
 endfunction
 
 function! s:set_statusline(statusline) abort
@@ -159,24 +159,27 @@ function! s:deleteline(first, ...) abort
   call call('deletebufline', [s:get_bufnr(), a:first] + a:000)
 endfunction
 
-function! s:_matchdelete(kind, winid) abort
-  if s:match_id[a:kind] == 0
+function! s:_matchdelete(match_id, winid) abort
+  if a:match_id == -1
     return
   endif
-  call matchdelete(s:match_id[a:kind], a:winid)
-  let s:match_id[a:kind] = 0
+  for info in getmatches(a:winid)
+    if info.id == a:match_id
+      call matchdelete(a:match_id, a:winid)
+      return
+    endif
+  endfor
 endfunction
 
 function! s:highlight_match(pattern) abort
-  if s:match_id.highlight != 0
-    call s:_matchdelete('highlight', s:completion_winID)
-  endif
+  call s:_matchdelete(s:match_id.highlight, s:completion_winID)
   if a:pattern ==# ''
     return
   endif
   try
     let s:match_id.highlight = matchadd(
-          \ 'gramMatch', a:pattern, 10, -1, {'window': s:completion_winID})
+          \ 'gramMatch', a:pattern, 10, s:match_id.highlight,
+          \ {'window': s:completion_winID})
   catch
     " Ignore.
   endtry
