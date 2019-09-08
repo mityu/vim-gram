@@ -25,7 +25,7 @@ KNOWN-ISSUES                  |gram-known-issues|
 FEATURES                                            *gram-features*
 
 - Asynchronous filtering by using |timer|.
-- Available in |cmdwin|.
+- Simple to use.
 
 ==============================================================================
 REQUIREMENTS                                       *gram-requirements*
@@ -34,7 +34,7 @@ REQUIREMENTS                                       *gram-requirements*
 - +popup
 - +timer
 
-and maybe some source requires +job.
+and maybe some sources require +job.
 
 
 ==============================================================================
@@ -70,6 +70,7 @@ gram#select({config} [,{options}])
     {options} are |gram-options|.  You can overwrite the user configrations via
     this argument, but you shouldn't use this a lot.  Plugin's option changes
     may make the users confused.
+
 
                                                     *gram#highlight_match()*
 gram#highlight_match({pattern})
@@ -272,6 +273,18 @@ function.
 
 
 ------------------------------------------------------------------------------
+CREATE-SOURCES                                      *gram-create-sources*
+
+You can place the source scripts anywhere convenient for you because you can
+use this plugin just by calling |gram#select()|.
+But, if you can't decide where to place it, you should write it in
+"autoload/gram/source/{name}.vim".
+This plugin's implementations and any matcher scripts won't use any files
+there.
+
+
+
+------------------------------------------------------------------------------
 ITEMS                                             *gram-item*
 
     {items} must be a list of strings or dictionaries.  When it is a list of
@@ -307,10 +320,9 @@ TODO                                                *gram-todo*
 * Add default matchers.
 * Add default sources. (They should be other plugins?)
 * Add modifiers for |gram-option-statusline|.
-* Complete this document.
 * Handle [count].
 * Use 'timeoutlen'.
-
+* Be flexible.
 
 ==============================================================================
 KNOWN-ISSUES                                        *gram-known-issues*
