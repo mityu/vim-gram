@@ -17,17 +17,13 @@ function! s:__init__() abort
   const s:PopupHeight = {-> min([max([&lines * 3 / 4, 35]), &lines - 6])}
   const s:PopupWidth = {-> min([max([&columns / 2, 90]), &columns])}
   const s:completion_options = {
-        \ 'pos': {-> 'center'},
+        \ 'pos': {-> 'topleft'},
         \ 'drag': {-> 0},
         \ 'border': {-> [0, 0, 0, 0]},
         \ 'callback': {-> 'gram#module#on_close'},
         \ 'cursorline': {-> 0},
         \ 'highlight': {-> '_gramWindow_'},
         \ 'zindex': {-> 100},
-        \ 'minheight': s:PopupHeight,
-        \ 'maxheight': s:PopupHeight,
-        \ 'minwidth': s:PopupWidth,
-        \ 'maxwidth': s:PopupWidth,
         \ }
   const s:prompt_options = {
         \ 'pos': {-> 'topleft'},
@@ -38,8 +34,6 @@ function! s:__init__() abort
         \ 'zindex': {-> 100},
         \ 'minheight': {-> 1},
         \ 'maxheight': {-> 1},
-        \ 'minwidth': s:PopupWidth,
-        \ 'maxwidth': s:PopupWidth,
         \ 'title': {-> 'statusline'},
         \ }
 endfunction
@@ -49,6 +43,10 @@ function! s:__on_close__() abort
   call s:_matchdelete('cursor', s:prompt_winID)
   call s:_matchdelete('highlight', s:completion_winID)
   call popup_close(s:prompt_winID)
+
+  augroup gram-window
+    autocmd!
+  augroup END
 endfunction
 
 function! s:_mapclear_buffer() abort
@@ -65,10 +63,7 @@ function! s:foreground() abort
         \ popup_create([''], map(deepcopy(s:completion_options), 'v:val()'))
   let s:prompt_winID =
         \ popup_create('', map(deepcopy(s:prompt_options), 'v:val()'))
-
-  let pos = popup_getpos(s:completion_winID)
-  call popup_move(s:prompt_winID,
-        \ {'line': pos.line - 2, 'col': pos.col})
+  call s:_adjust_position()
 
   call s:setvar('&cursorline', 1)
 
@@ -77,6 +72,11 @@ function! s:foreground() abort
   endif
 
   call gram#module#import('getchar').define_plugmaps()
+
+  augroup gram-window
+    autocmd!
+    autocmd VimResized * call s:_adjust_position()
+  augroup END
 endfunction
 
 function! s:background(...) abort
@@ -85,6 +85,29 @@ function! s:background(...) abort
     return
   endif
   call popup_close(s:completion_winID, get(a:000, 0, -1))
+endfunction
+
+function! s:_adjust_position() abort
+  let width = s:PopupWidth()
+  let height = s:PopupHeight()
+  let line = (&lines - height) / 2
+  let col = (&columns - width) / 2
+
+  call popup_move(s:completion_winID, {
+        \ 'line': line,
+        \ 'col': col,
+        \ 'maxwidth': width,
+        \ 'minwidth': width,
+        \ 'maxheight': height,
+        \ 'minheight': height,
+        \ })
+  call popup_move(s:prompt_winID, {
+        \ 'line': line - 1,
+        \ 'col': col,
+        \ 'minwidth': width,
+        \ 'maxwidth': width,
+        \ })
+
 endfunction
 
 function! s:display_input_string(input) abort
