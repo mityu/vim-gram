@@ -59,6 +59,12 @@ function! s:select(config, options) abort
     call s:_init()
   endif
 
+  if !has_key(a:config, 'callback')
+    call s:message.echomsg_error(
+          \'Not enough config entries: Missing "callback"')
+    return 0
+  endif
+
   if !(has_key(a:config, 'completefunc') || has_key(a:config, 'items'))
     call s:message.echomsg_error(
           \'Not enough config entries: Missing "completefunc"')
@@ -105,7 +111,7 @@ function! s:select(config, options) abort
 endfunction
 
 function! s:invoke_callback() abort
-  if has_key(s:source_config, 'callback') && !empty(s:selected_item)
+  if !empty(s:selected_item)
     call call(s:source_config.callback, [deepcopy(s:selected_item)])
   endif
   let s:selected_item = {}
