@@ -4,35 +4,37 @@ if !has('vimscript-3')
   finish
 endif
 
-let s:func = themis#helper('scope').funcs('autoload/gram/mapping.vim')
-call themis#func_alias(s:func)
+let s:mapping = themis#helper('scope').funcs('autoload/gram/mapping.vim')
+let s:getchar = themis#helper('scope').funcs('autoload/gram/getchar.vim')
+call themis#func_alias(s:mapping)
+call themis#func_alias(s:getchar)
 
 Describe gram/mapping.vim
   Describe s:_get_escaped_mapchar()
     It doesn't escape a non-special key.
-      call g:assert.equal(s:func._get_escaped_mapchar('a'), 'a')
+      call g:assert.equal(s:mapping._get_escaped_mapchar('a'), 'a')
     End
 
     It doesn't escape an escaped special key
-      call g:assert.equal(s:func._get_escaped_mapchar("\<C-w>"), "\<C-w>")
+      call g:assert.equal(s:mapping._get_escaped_mapchar("\<C-w>"), "\<C-w>")
     End
 
     It escapes a special key.
-      call g:assert.equal(s:func._get_escaped_mapchar('<C-w>'), "\<C-w>")
+      call g:assert.equal(s:mapping._get_escaped_mapchar('<C-w>'), "\<C-w>")
     End
   End
 
   Describe s:_unify_mapchar()
     It escapes every special keys in string - 1.
       call g:assert.equal(
-            \ s:func._unify_mapchar('a<C-w>b<C-a>c'),
+            \ s:mapping._unify_mapchar('a<C-w>b<C-a>c'),
             \ "a\<C-w>b\<C-a>c"
             \ )
     End
 
     It escapes every special keys in string - 2.
       call g:assert.equal(
-            \ s:func._unify_mapchar('a<C-w><C-a>c'),
+            \ s:mapping._unify_mapchar('a<C-w><C-a>c'),
             \ "a\<C-w>\<C-a>c"
             \ )
     End
@@ -42,50 +44,50 @@ Describe gram/mapping.vim
     Before all
       call gram#module#import('mapping')  " Call __init__()
 
-      call s:func.noremap('n', 'a', 'aa')
-      call s:func.noremap('n', 'g', 'gg')
-      call s:func.noremap('n', 'ga', 'gga')
-      call s:func.noremap('n', 'gb', 'ggb')
+      call s:mapping.noremap('n', 'a', 'aa')
+      call s:mapping.noremap('n', 'g', 'gg')
+      call s:mapping.noremap('n', 'ga', 'gga')
+      call s:mapping.noremap('n', 'gb', 'ggb')
     End
 
     After all
-      call s:func.unmap('n', 'a')
-      call s:func.unmap('n', 'g')
-      call s:func.unmap('n', 'ga')
-      call s:func.unmap('n', 'gb')
+      call s:mapping.unmap('n', 'a')
+      call s:mapping.unmap('n', 'g')
+      call s:mapping.unmap('n', 'ga')
+      call s:mapping.unmap('n', 'gb')
     End
 
     It returns {rhs} 1.
       call g:assert.equals(
-            \ s:func._get_rhs('n', ['a']),
+            \ s:getchar._get_rhs('n', ['a']),
             \ [{'key': ['aa'], 'kind': 'noremap'}, []]
             \ )
     End
 
     It returns {rhs} 2.
       call g:assert.equals(
-            \ s:func._get_rhs('n', ['a', 'a']),
+            \ s:getchar._get_rhs('n', ['a', 'a']),
             \ [{'key': ['aa'], 'kind': 'noremap'}, ['a']]
             \ )
     End
 
     It doesn't return any keys if {lhs} didn't find.
       call g:assert.equals(
-            \ s:func._get_rhs('n', ['b']),
+            \ s:getchar._get_rhs('n', ['b']),
             \ [{'key': ['b'], 'kind': 'noremap'}, []]
             \ )
     End
 
     It returns {rhs} with its strchars({lhs}) >= 2.
       call g:assert.equals(
-            \ s:func._get_rhs('n', ['g', 'a']),
+            \ s:getchar._get_rhs('n', ['g', 'a']),
             \ [{'key': ['gga'], 'kind': 'noremap'}, []]
             \ )
     End
 
     It doesn't return any keys if {lhs} isn't completed.
       call g:assert.equals(
-            \ s:func._get_rhs('n', ['g']),
+            \ s:getchar._get_rhs('n', ['g']),
             \ [{'key': [], 'kind': 'noremap'}, []]
             \ )
     End
