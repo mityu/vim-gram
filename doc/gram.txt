@@ -305,13 +305,33 @@ CONFIGURATION-EXAMPLES                          *gram-configuration-examples*
 ==============================================================================
 SOURCE-EXAMPLES                                   *gram-source-examples*
 
-- Simple MRU(Most Recently Used) source using |v:oldfiles|. >
+- A simple MRU(Most Recently Used) source using |v:oldfiles|. >
     call gram#select({
         \ 'name': 'MRU',
         \ 'items': v:oldfiles,
         \ 'callback': {item -> execute('edit ' . fnameescape(item.word))}
         \ })
 
+- An example to add items (the names of the months, in this example)
+  asynchronously. >
+    let s:items = []
+    let s:source = {'name': 'month/async'}
+    function! s:source.completefunc(input) abort
+        let s:items = split('Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec')
+        call timer_start(100, funcref('s:timer_callback'), {'repeat': -1})
+    endfunction
+    function! s:source.callback(item) abort
+        echo 'This month is: ' . a:item.word
+    endfunction
+    function! s:timer_callback(timer) abort
+        if !gram#is_active() || empty(s:items)
+            call timer_stop(a:timer)
+            return
+        endif
+        call gram#add_items([remove(s:items, 0)])
+    endfunction
+    call gram#select(s:source)
+<
 
 ==============================================================================
 TODO                                                *gram-todo*
@@ -327,6 +347,7 @@ TODO                                                *gram-todo*
 ==============================================================================
 KNOWN-ISSUES                                        *gram-known-issues*
 
+* Sometimes a key input after closing this plugin is thrown away.
 
 
 ==============================================================================
