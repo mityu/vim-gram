@@ -101,11 +101,16 @@ function! s:select(config, options) abort
   " Re-initialize s:context
   let s:context.items = {'base': [], 'matched': []}
 
-  call s:window.foreground()
-  call s:window.display_input_string('')
-  call s:invoke_completefunc('')
-  call s:draw_statusline()
-  call s:getchar.start()
+  try
+    call s:window.foreground()
+    call s:window.display_input_string('')
+    call s:invoke_completefunc('')
+    call s:draw_statusline()
+    call s:getchar.start()
+  catch
+    call s:message.echomsg_error(v:exception)
+    call s:window.background()
+  finally
 
   return 1
 endfunction
@@ -134,15 +139,20 @@ function! s:highlight_match(pattern) abort
   call s:window.highlight_match(a:pattern)
 endfunction
 
+function! s:_filter_all_items() abort
+  call s:_set_completion([])
+  let s:matcher_handler.items_queue = []
+  call s:_trigger_matcher(s:context.items.base)
+endfunction
+
 function! s:set_items(items) abort
   let s:context.items.base = s:_standardize_items(a:items)
-  call s:_set_completion([])
-  call s:_trigger_matcher(s:context.items.base)
+  call s:_filter_all_items()
 endfunction
 
 function! s:add_items(items) abort
   let items = s:_standardize_items(a:items)
-  call extend(s:context.items, items)
+  call extend(s:context.items.base, items)
   call s:_trigger_matcher(items)
 endfunction
 
@@ -160,6 +170,7 @@ function! s:is_active() abort
 endfunction
 
 function! s:invoke_completefunc(input) abort
+  call s:set_items([])
   call call(s:source_config.completefunc, [a:input])
 endfunction
 
@@ -187,18 +198,17 @@ function! s:on_input_changed(input) abort
     call s:invoke_completefunc(a:input)
   endif
   call s:window.display_input_string(a:input)
-  call s:_trigger_matcher(s:get_items('base'))
+  call s:_filter_all_items()
 endfunction
 
 " Call matcher function asynchronously by using timer.
 function! s:_trigger_matcher(items) abort
   if s:getchar.get_input() ==# ''
     call s:_pause_matcher()
-    call s:_set_completion(a:items)
+    call s:_add_completion(a:items)
     return
   endif
-  call s:_set_completion([])
-  let s:matcher_handler.items_queue = deepcopy(a:items)
+  let s:matcher_handler.items_queue += deepcopy(a:items)
   if s:matcher_handler.timer_id == 0
     let s:matcher_handler.timer_id =
           \ timer_start(0, funcref('s:_call_matcher'), {'repeat': -1})
@@ -215,7 +225,7 @@ function! s:_call_matcher(timer) abort
 
   let item = remove(s:matcher_handler.items_queue, 0)
   if s:matcher.invoke_matcher(item)
-    call s:_add_completion(item)
+    call s:_add_completion([item])
   endif
 endfunction
 
@@ -230,13 +240,13 @@ function! s:_set_completion(items) abort
         \ s:_displize_items(s:context.items.matched))
 endfunction
 
-function! s:_add_completion(item) abort
-  call s:window.add_completion(s:_displize_items([a:item]))
+function! s:_add_completion(items) abort
+  call s:window.add_completion(s:_displize_items(a:items))
 
   " Calling this must be at last because s:window.add_completion() checks if
   " the latest completion is empty or not by checking if
   " s:context.items.matched is empty or not.
-  call add(s:context.items.matched, deepcopy(a:item))
+  call extend(s:context.items.matched, deepcopy(a:items))
 endfunction
 
 function! s:_standardize_items(items) abort
