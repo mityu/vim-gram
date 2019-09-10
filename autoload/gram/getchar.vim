@@ -41,6 +41,7 @@ function! s:_getchar.start() abort
         \ 'filter': self.filter,
         \ 'callback': self.callback,
         \ 'pos': 'center',
+        \ 'mask': [[1, 1, 1, 1]],
         \ })
 endfunction
 function! s:_getchar.callback(winid, idx) abort
