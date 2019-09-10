@@ -23,6 +23,7 @@ endfunction
 
 function! s:__on_close__() abort
   let s:mode = 'n'
+  let s:key_queue = []
   call s:_getchar.finish()
 endfunction
 
