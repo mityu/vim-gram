@@ -9,13 +9,13 @@ let s:getchar = themis#helper('scope').funcs('autoload/gram/getchar.vim')
 call themis#func_alias(s:mapping)
 call themis#func_alias(s:getchar)
 
-Describe gram/mapping.vim
+Describe gram/mapping
   Describe s:_get_escaped_mapchar()
     It doesn't escape a non-special key.
       call g:assert.equal(s:mapping._get_escaped_mapchar('a'), 'a')
     End
 
-    It doesn't escape an escaped special key
+    It doesn't escape an escaped special key.
       call g:assert.equal(s:mapping._get_escaped_mapchar("\<C-w>"), "\<C-w>")
     End
 

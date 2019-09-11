@@ -1,0 +1,64 @@
+if !has('vimscript-3')
+  call g:assert.skip(execute('version') .
+        \ "\nThis vim does not have :scriptversion 3")
+  finish
+endif
+
+Describe items
+  Before all
+    let g:DoNothing = {-> 0}
+
+    call gram#select({
+          \ 'name': 'gram-test',
+          \ 'completefunc': g:DoNothing,
+          \ 'callback': g:DoNothing,
+          \ })
+
+    call gram#module#import('impl')
+    let g:StandardizeItems =
+          \ themis#helper('scope').funcs('autoload/gram/impl.vim')._standardize_items
+  End
+
+  Before each
+    call gram#set_items([])
+  End
+
+  Describe set_items()
+    It sets items.
+      let items = g:StandardizeItems(['aaa', 'bbb'])
+      call gram#set_items(items)
+      sleep 10m  " Wait until filtering finished.
+      call g:assert.equals(gram#get_items('base'), items)
+      call g:assert.equals(gram#get_items('matched'), items)
+    End
+
+    It replaces items.
+      call gram#set_items(['aaa', 'bbb'])
+      let items = g:StandardizeItems(['ccc'])
+      call gram#set_items(items)
+      sleep 10m  " Wait until filtering finished.
+      call g:assert.equals(gram#get_items('base'), items)
+      call g:assert.equals(gram#get_items('matched'), items)
+    End
+  End
+
+  Describe add_items()
+    Before each
+      call gram#set_items(g:StandardizeItems(['aaa']))
+    End
+
+    It adds items
+      let items = g:StandardizeItems(['bbb'])
+      call gram#add_items(items)
+      sleep 10m  " Wait until filtering finished.
+      let items = g:StandardizeItems(['aaa']) + items
+      call g:assert.equals(gram#get_items('base'), items)
+      call g:assert.equals(gram#get_items('matched'), items)
+    End
+  End
+
+  After all
+    call gram#module#import('window').background()
+    unlet g:StandardizeItems
+  End
+End
