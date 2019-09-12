@@ -62,3 +62,95 @@ Describe items
     unlet g:StandardizeItems
   End
 End
+
+
+Describe filtering with matcher
+  Before all
+    let s:counter = {'_default': 0, '_count': 0}
+    function! s:counter.restart() abort
+      let self._count = self._default
+    endfunction
+    function! s:counter.decrement() abort
+      let self._count -= 1
+    endfunction
+    function! s:counter.get() abort
+      return self._count
+    endfunction
+    function! s:counter.set(count) abort
+      let self._default = a:count
+      call self.restart()
+    endfunction
+    function! s:wait_filtering() abort
+      call s:counter.restart()
+      while s:counter.get() > 0
+        sleep 10m
+      endwhile
+    endfunction
+
+    let s:matcher = {'_input': ''}
+    function! s:matcher.on_input(input) abort
+      let self._input = a:input
+    endfunction
+    function! s:matcher.matcher(item) abort
+      call s:counter.decrement()
+      return stridx(item.word, self._input) != -1
+    endfunction
+
+    call gram#custom#matcher_add('gram-test', s:matcher.matcher,
+          \ s:matcher.on_input)
+    call gram#custom#set_option('matcher', 'gram-test')
+
+    let g:DoNothing = {-> 0}
+    call gram#select({
+          \ 'name': 'gram-test',
+          \ 'completefunc': g:DoNothing,
+          \ 'callback': g:DoNothing,
+          \ })
+
+    call gram#module#import('impl')
+    let g:StandardizeItems =
+          \ themis#helper('scope').funcs('autoload/gram/impl.vim')._standardize_items
+
+    call gram#custom#noremap('i', '@', '<C-o>"_dd')
+  End
+
+  Before each
+    execute "normal! i@\<ESC>"
+    call gram#set_items([])
+  End
+
+  It filters items.
+    call s:counter.set(3)
+    let items = g:StandardizeItems(['aaa', 'bbb', 'abb'])
+    call gram#set_items(items)
+
+    execute "normal! ia\<ESC>"
+    call s:wait_filtering()
+    call g:assert.equals(gram#get_items('matched'),
+          \ g:StandardizeItems(['aaa', 'abb']))
+
+    execute "normal! ia\<ESC>"
+    call s:wait_filtering()
+    call g:assert.equals(gram#get_items('matched'),
+          \ g:StandardizeItems(['aaa']))
+  End
+
+  It filters items added with add_items().
+    call s:counter.set(3)
+    let items = g:StandardizeItems(['aaa', 'bbb'])
+    let new_item = g:StandardizeItems(['abb'])
+    call gram#set_items(items)
+    execute "normal! ia\<ESC>"
+    call gram#add_items(new_item)
+    sleep 1
+    " call s:wait_filtering()
+    call g:assert.equals(gram#get_items('matched'),
+          \ g:StandardizeItems(['aaa', 'abb']))
+  End
+
+  After all
+    call gram#custom#unmap('i', '@')
+    call gram#module#import('window').background()
+    unlet g:StandardizeItems
+  End
+End

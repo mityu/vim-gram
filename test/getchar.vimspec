@@ -1,0 +1,63 @@
+if !has('vimscript-3')
+  call g:assert.skip(execute('version') .
+        \ "\nThis vim does not have :scriptversion 3")
+  finish
+endif
+
+Describe gram
+  Before all
+    let g:DoNothing = {-> 0}
+
+    call gram#select({
+          \ 'name': 'gram-test',
+          \ 'completefunc': g:DoNothing,
+          \ 'callback': g:DoNothing,
+          \ })
+
+    let s:getchar = gram#module#import('getchar')
+    let s:edit = gram#module#import('edit')
+  End
+
+  Describe getchar
+    It is normal-mode first.
+      call g:assert.equals(s:getchar.get_mode(), 'n')
+    End
+
+    It changes mode.
+      call g:assert.equals(s:getchar.get_mode(), 'n')
+      normal! i
+      call g:assert.equals(s:getchar.get_mode(), 'i')
+      execute "normal! \<ESC>"
+      call g:assert.equals(s:getchar.get_mode(), 'n')
+    End
+  End
+
+  Describe edit
+    Before all
+      call gram#custom#noremap('i', '@', '<C-o>"_dd')
+    End
+
+    Before each
+      execute "normal! i@\<ESC>"
+    End
+
+    It gets a single input to filter items.
+      execute "normal! ia\<ESC>"
+      call g:assert.equals(s:edit.get_input_info('text'), 'a')
+    End
+
+    It gets inputs to filter items.
+      execute "normal! ia\<ESC>"
+      execute "normal! ia\<ESC>"
+      call g:assert.equals(s:edit.get_input_info('text'), 'aa')
+    End
+
+    After all
+      call gram#custom#unmap('n', '@')
+    End
+  End
+
+  After all
+    call gram#module#import('window').background()
+  End
+End
