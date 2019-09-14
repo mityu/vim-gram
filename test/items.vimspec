@@ -93,7 +93,7 @@ Describe filtering with matcher
     endfunction
     function! s:matcher.matcher(item) abort
       call s:counter.decrement()
-      return stridx(item.word, self._input) != -1
+      return stridx(a:item.word, self._input) != -1
     endfunction
 
     call gram#custom#matcher_add('gram-test', s:matcher.matcher,
