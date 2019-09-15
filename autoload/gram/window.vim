@@ -19,7 +19,9 @@ function! s:__init__() abort
   const s:completion_options = {
         \ 'pos': {-> 'topleft'},
         \ 'drag': {-> 0},
-        \ 'border': {-> [0, 0, 0, 0]},
+        \ 'padding': {-> [0, 0, 0, 1]},
+        \ 'border': {-> [0, 0, 0, 1]},
+        \ 'borderchars': {-> ['', '', '', '|']},
         \ 'callback': {-> 'gram#module#on_close'},
         \ 'cursorline': {-> 0},
         \ 'highlight': {-> '_gramWindow_'},
@@ -99,13 +101,15 @@ function! s:_adjust_position() abort
         \ 'maxwidth': width,
         \ 'minwidth': width,
         \ 'maxheight': height,
-        \ 'minheight': height,
+        \ 'minheight': 0,
         \ })
   call popup_move(s:prompt_winID, {
         \ 'line': line - 2,
         \ 'col': col,
         \ 'minwidth': width,
         \ 'maxwidth': width,
+        \ 'maxheight': 1,
+        \ 'minheight': 1,
         \ })
 
 endfunction
