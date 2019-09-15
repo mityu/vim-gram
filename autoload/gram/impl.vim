@@ -261,25 +261,30 @@ function! s:_displize_items(items) abort
         \ {_, value -> value.abbr ==# '' ? value.word : value.abbr})
 endfunction
 
-function! s:_set_window_color() abort
-  " NOTE: Linking gramMenu to Normal doesn't work because set "Normal" to
-  " 'wincolor' option has no effects.
-  let target = 'Normal'
-  while v:true
-    let [kind, hl_arg] = s:_get_highlight_status(target)
-    if kind ==# 'color'
-      break
+if has('patch-8.1.1811')
+  function! s:_set_window_color() abort
+    highlight link _gramWindow_ Normal
+  endfunction
+else
+  function! s:_set_window_color() abort
+    " NOTE: Before the patch, setting 'wincolor' to 'Normal' didin't work.
+    let target = 'Normal'
+    while v:true
+      let [kind, hl_arg] = s:_get_highlight_status(target)
+      if kind ==# 'color'
+        break
+      endif
+      " Got a highlight link. Try again.
+      let target = hl_arg
+    endwhile
+
+    if hl_arg ==# 'cleared' || hl_arg ==# ''
+      let hl_arg = 'NONE'
     endif
-    " Got a highlight link. Try again.
-    let target = hl_arg
-  endwhile
 
-  if hl_arg ==# 'cleared' || hl_arg ==# ''
-    let hl_arg = 'NONE'
-  endif
-
-  execute 'highlight _gramWindow_' hl_arg
-endfunction
+    execute 'highlight _gramWindow_' hl_arg
+  endfunction
+endif
 
 let &cpoptions = s:cpoptions_save
 unlet s:cpoptions_save
