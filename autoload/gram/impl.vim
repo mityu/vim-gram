@@ -83,15 +83,15 @@ function! s:select(config, options) abort
     return 0
   endif
 
-  for [key, Value] in items(a:config)  " 'Value' might be Funcref.
-    let s:source_config[key] = Value
-  endfor
   call s:option.source_option_set(a:options)
-
+  let s:source_config = deepcopy(a:config)
   if !has_key(a:config, 'completefunc')
     let s:source_config.completefunc =
           \ {-> gram#set_items(s:source_config.items)}
     call s:option.source_option_add({'force_refresh': 0})
+  endif
+  if !has_key(a:config, 'hook')
+    let s:source_config.hook = {}
   endif
 
   " Set default colors
@@ -102,7 +102,9 @@ function! s:select(config, options) abort
   let s:context.items = {'base': [], 'matched': []}
 
   try
+    call s:invoke_hook('OpenWindowPre')
     call s:window.foreground()
+    call s:invoke_hook('OpenWindowPost')
     call s:window.display_input_string('')
     call s:invoke_completefunc('')
     call s:draw_statusline()
@@ -113,6 +115,12 @@ function! s:select(config, options) abort
   finally
 
   return 1
+endfunction
+
+function! s:invoke_hook(kind) abort
+  if has_key(s:source_config.hook, a:kind)
+    call call(s:source_config.hook[a:kind], [])
+  endif
 endfunction
 
 function! s:invoke_callback() abort
