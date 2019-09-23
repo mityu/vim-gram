@@ -160,7 +160,7 @@ function! s:append(line, expr) abort
 endfunction
 
 function! s:deleteline(first, ...) abort
-  call call('deletebufline', [s:get_bufnr(), a:first] + a:000)
+  silent call call('deletebufline', [s:get_bufnr(), a:first] + a:000)
 endfunction
 
 function! s:_matchdelete(match_id, winid) abort
