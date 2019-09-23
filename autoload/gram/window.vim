@@ -211,6 +211,7 @@ function! s:execute_func(Funcref) abort
   let eventignore_save = &eventignore
   set eventignore=all
   try
+    let rettv = 0
     call win_execute(s:get_winID(), 'let rettv = a:Funcref()')
     return rettv
   finally
