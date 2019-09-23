@@ -102,13 +102,12 @@ function! s:select(config, options) abort
   let s:context.items = {'base': [], 'matched': []}
 
   try
-    call s:invoke_hook('OpenWindowPre')
     call s:window.foreground()
-    call s:invoke_hook('OpenWindowPost')
     call s:window.display_input_string('')
     call s:invoke_completefunc('')
     call s:draw_statusline()
     call s:getchar.start()
+    call s:invoke_hook('Enter')
   catch
     call s:message.echomsg_error(v:exception)
     call s:window.background()
@@ -128,7 +127,6 @@ function! s:invoke_callback() abort
     call call(s:source_config.callback, [deepcopy(s:selected_item)])
   endif
   let s:selected_item = {}
-  let s:source_config = {}
 endfunction
 
 function! s:_get_highlight_status(target) abort

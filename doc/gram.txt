@@ -67,6 +67,14 @@ gram#select({config} [,{options}])
         only when the user select a item.  (If selecting is canceled, this
         function won't be called.)  The argument is the selected item.
 
+    - hook (Optional)
+        |Dictionary| of |Funcref| or |String| of hook functions.  These
+        functions are available:
+        - Enter     After opening the plugin window.
+        - ExitPre   Just before closing the plugin window.
+        - ExitPost  Just after closing the plugin window and back to the
+                    original window.
+
     {options} are |gram-options|.  You can overwrite the user configrations via
     this argument, but you shouldn't use this a lot.  Plugin's option changes
     may make the users confused.
