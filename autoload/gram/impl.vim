@@ -8,6 +8,7 @@ function! s:__init__() abort
   const s:message = gram#module#import('message')
   const s:window = gram#module#import('window')
   const s:matcher = gram#module#import('matcher')
+  const s:preview = gram#module#import('preview')
 
   const s:item_skeleton =
         \ {'word': '', 'abbr': '', 'menu': '', 'user_data': ''}
@@ -180,6 +181,16 @@ function! s:invoke_completefunc(input) abort
   call call(s:source_config.completefunc, [a:input])
 endfunction
 
+function! s:invoke_previewfunc() abort
+  if !has_key(s:source_config, 'previewfunc')
+    call s:message.echo_warning('This source doesn''t have preview feature.')
+    return
+  endif
+  let cursorline = s:window.execute_func({-> line('.')})
+  let item = s:context.items.matched[cursorline - 1]
+  call call(s:source_config.previewfunc, [item])
+endfunction
+
 function! s:draw_statusline() abort
   call s:window.set_statusline(s:generate_statusline())
 endfunction
@@ -196,6 +207,13 @@ function! s:generate_statusline() abort
         \ '\=modifiers[submatch(0)]',
         \ 'g'
         \ )
+endfunction
+
+function! s:on_cursor_moved() abort
+  call s:preview.hide()
+  if s:option.get_option('auto_preview')
+    call s:invoke_previewfunc()
+  endif
 endfunction
 
 function! s:on_input_changed(input) abort

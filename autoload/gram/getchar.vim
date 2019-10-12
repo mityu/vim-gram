@@ -11,10 +11,11 @@ function! s:__init__() abort
 
   " These mappings are defined with <expr>.
   const s:plugmaps = {
-      \ 'j': '["j", "gg"][line(".") == line("$")]',
-      \ 'k': '["k", "G"][line(".") == 1]',
+      \ 'j': s:_bind_func('_nmap_cursor_down()'),
+      \ 'k': s:_bind_func('_nmap_cursor_up()'),
       \ "\<CR>": s:_bind_func('_nmap_select()'),
       \ 'q': s:_bind_func('_nmap_quit()'),
+      \ 'p': s:_bind_func('_nmap_preview()'),
       \ }
 
   let s:mode = 'n'
@@ -222,26 +223,46 @@ endfunction
 
 
 " --- Plugin default mappings ---
+function! s:_lag_call(function, ...) abort
+  let args = a:0 >= 1 ? a:1 : []
+  call timer_start(0, {timer_id -> call(a:function, args)}, {'repeat': 1})
+endfunction
+
 " Workaround: Calling s:window.background() here occurs E315 Error.
 " (Ref: https://github.com/vim-jp/issues/issues/1300)
 " So, we call s:window.background() a bit later by using timer.
 function! s:_nmap_select() abort
-  call timer_start(0, funcref(
-        \ 's:_callback_close_window', [s:window.execute_func({-> line('.') - 1})]
-        \ ), {'repeat': 1})
+  call s:_lag_call(s:window.background,
+        \ [s:window.execute_func({-> line('.') - 1})])
   return ''
 endfunction
 
 function! s:_nmap_quit() abort
-  call timer_start(0, funcref(
-        \ 's:_callback_close_window', [-1]),
-        \ {'repeat': 1})
+  call s:_lag_call(s:window.background, [-1])
   return ''
 endfunction
 
-function! s:_callback_close_window(selected_idx, timer_id) abort
-  call s:window.background(a:selected_idx)
+function! s:_nmap_preview() abort
+  call s:_lag_call(s:impl.invoke_previewfunc)
+  return ''
 endfunction
+
+function! s:_nmap_cursor_down() abort
+  call s:_lag_call(s:impl.on_cursor_moved)
+  if line('.') == line('$')
+    return 'gg'
+  endif
+  return 'j'
+endfunction
+
+function! s:_nmap_cursor_up() abort
+  call s:_lag_call(s:impl.on_cursor_moved)
+  if line('.') == 1
+    return 'G'
+  endif
+  return 'k'
+endfunction
+
 
 let &cpoptions = s:cpoptions_save
 unlet s:cpoptions_save

@@ -4,6 +4,7 @@ set cpoptions&vim
 
 let s:impl = gram#module#import('impl')
 let s:message = gram#module#import('message')
+let s:preview = gram#module#import('preview')
 
 function! gram#select(config, ...) abort
   if gram#is_active()
@@ -40,6 +41,13 @@ function! gram#get_items(kind) abort
     return a:kind ==# '' ? {'base': [], 'matched': []} : []
   endif
   return s:impl.get_items(a:kind)
+endfunction
+
+function! gram#show_preview(contents) abort
+  if !gram#is_active()
+    return
+  endif
+  call s:preview.show(a:contents)
 endfunction
 
 function! gram#is_active() abort

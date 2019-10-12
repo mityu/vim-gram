@@ -14,6 +14,7 @@ function! s:__init__() abort
         \ 'matcher': 'multi_regexp',
         \ 'enable_nmapclear': 1,
         \ 'enable_imapclear': 1,
+        \ 'auto_preview': 0,
         \ }
 endfunction
 
