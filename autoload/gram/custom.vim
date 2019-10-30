@@ -13,16 +13,28 @@ function! s:__init__() abort
   const s:option = gram#module#import('option')
 endfunction
 
-function! gram#custom#noremap(mode, lhs, rhs) abort
-  call s:mapping.noremap(a:mode, a:lhs, a:rhs)
+function! gram#custom#map_key(mode, lhs, rhs) abort
+  call s:mapping.map_key(a:mode, a:lhs, a:rhs)
 endfunction
 
-function! gram#custom#map(mode, lhs, rhs) abort
-  call s:mapping.map(a:mode, a:lhs, a:rhs)
+function! gram#custom#map_action(mode, lhs, action_name) abort
+  call s:mapping.map_action(a:mode, a:lhs, a:action_name)
 endfunction
 
 function! gram#custom#unmap(mode, lhs) abort
   call s:mapping.unmap(a:mode, a:lhs)
+endfunction
+
+function! gram#custom#register_action(id, mode, action) abort
+  call s:mapping.register_action(a:id, a:mode, a:action)
+endfunction
+
+function! gram#custom#unregister_action(id, mode, action_name) abort
+  return s:mapping.unregister_action(a:id, a:mode, a:action_name)
+endfunction
+
+function! gram#custom#config_for_action_id(id, config) abort
+  "TODO: implement.
 endfunction
 
 function! gram#custom#set_option(name, value) abort

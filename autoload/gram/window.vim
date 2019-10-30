@@ -51,15 +51,6 @@ function! s:__on_close__() abort
   augroup END
 endfunction
 
-function! s:_mapclear_buffer() abort
-  nmapclear <buffer>
-  let keys = map(split(execute('nmap'), "\n"),
-        \ {_, line -> matchstr(line, '^\a*\s\+\zs\S\+\ze\s\+')})
-  for key in keys
-    execute 'nnoremap <buffer> <nowait>' key key
-  endfor
-endfunction
-
 function! s:foreground() abort
   let s:completion_winID =
         \ popup_create([''], map(deepcopy(s:completion_options), 'v:val()'))
@@ -68,12 +59,6 @@ function! s:foreground() abort
   call s:_adjust_position()
 
   call s:setvar('&cursorline', 1)
-
-  if s:GetOption('enable_nmapclear')
-    call s:execute_func({-> s:_mapclear_buffer()})
-  endif
-
-  call gram#module#import('getchar').define_plugmaps()
 
   augroup gram-window
     autocmd!
@@ -229,6 +214,18 @@ endfunction
 
 function! s:getvar(name, ...) abort
   return call('getwinvar', [s:get_winID(), a:name] + a:000)
+endfunction
+
+function! s:set_cursor_line(line) abort
+  call s:execute_func(function('cursor', [a:line, 1]))
+
+  " Force to update the display.  I don't know why but without this :redraw
+  " command, the cursor line isn't updated correctly.
+  call s:execute('redraw')
+endfunction
+
+function! s:line(expr) abort
+  return line(a:expr, s:get_winID())
 endfunction
 
 let &cpoptions = s:cpoptions_save

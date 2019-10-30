@@ -216,12 +216,13 @@ function! s:on_cursor_moved() abort
   endif
 endfunction
 
-function! s:on_input_changed(input) abort
+function! s:on_input_changed(input, curcol) abort
   call s:matcher.invoke_on_input(a:input)
   if s:option.get_option('force_refresh')
     call s:invoke_completefunc(a:input)
   endif
   call s:window.display_input_string(a:input)
+  call s:window.show_cursor(a:curcol)
   call s:_filter_all_items()
 endfunction
 
