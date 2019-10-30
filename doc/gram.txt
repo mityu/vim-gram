@@ -26,6 +26,7 @@ FEATURES                                            *gram-features*
 
 - Asynchronous filtering by using |timer|.
 - Simple to use.
+- Available everywhere, of course including command-line, and |cmdwin|.
 
 ==============================================================================
 REQUIREMENTS                                       *gram-requirements*
@@ -75,6 +76,11 @@ gram#select({config} [,{options}])
         - ExitPost  Just after closing the plugin window and back to the
                     original window.
 
+    - previewfunc (Optional)
+        |Funcref| or |String| of a function to show preview.  This function
+        takes one argument of a |Dictionary| of the currently selected item.
+        The dictionary is formed as |gram-item|.
+
     {options} are |gram-options|.  You can overwrite the user configrations via
     this argument, but you shouldn't use this a lot.  Plugin's option changes
     may make the users confused.
@@ -117,12 +123,13 @@ gram#is_active()
     useful when you make asynchronous matchers or completefunc.
 
                                                     *gram-mappings*
-                                                    *gram#custom#noremap()*
-                                                    *gram#custom#map()*
-gram#custom#noremap({mode}, {lhs}, {rhs})
-gram#custom#map({mode}, {lhs}, {rhs})
-    |:noremap| or |:map| for this plugin.
-    Map {lhs} to {rhs}, but you cannot overwrite <C-c>.
+                                                    *gram#custom#map_keys()*
+gram#custom#map_keys({mode}, {lhs}, {rhs})
+    |:map| for this plugin.
+    This function maps {lhs} to {rhs}, but you cannot overwrite <C-c>.
+    <C-c> will
+    - close the window in normal-mode.
+    - stop insert-mode in insert-mode.
 
     {mode} is one of the followings:
     n       Normal mode
@@ -136,25 +143,34 @@ gram#custom#map({mode}, {lhs}, {rhs})
     " Quit gram.vim from insert mode via <C-e>.
     call gram#custom#noremap('i', '<C-e>', ['<ESC>', 'q'])
 <
-    In |gram.vim|'s window, in normal/insert mode, you can use Vim's built-in
-    mappings without [count] except for the following mappings:
+                                                    *gram#custom#map_action()*
+gram#custom#map_action({mode}, {lhs}, {action-name})
+    Same as |gram#custom#map_keys()|, but specify an {action-name} instead of
+    {rhs} keys.
 
-    normal mode
+    In default, |gram.vim| provides the following actions.
+    Normal mode
     -----------
-    <CR>    Select an item
-    q,<C-c> Close window
+    quit                    Quit this plugin.
+    select-item             Select the item under the cursor.
+    select-next-item        Select the next item.
+    select-prev-item        Select the previous item.
+    preview                 Show preview if the current source provides it.
+    start-insert            Start insert-mode.
 
-    insert mode
+    Insert mode
     -----------
-    <CR>    Decide input and leave insert mode
-    <C-c>   Cancel inputting and leave insert mode
+    stop-insert             Stop insert-mode with deciding your input.
+    cancel-insert           Stop insert-mode with throwing away your input.
+    move-to-right           Move one character right.
+    move-to-left            Move one character left.
+    move-to-head            Move to the head.
+    move-to-tail            Move to the tail.
+    delete-char             Delete a char.
+    delete-word             Delete a word.
+    delete-to-the-beginning Delete all strings between the head and the
+                            cursor.
 
-    And, however, |gram.vim| cannot handle built-in mappings that needs more
-    than two key inputs to use, like |gg| in normal mode..  If you want to use
-    them, please map them to themselves via |gram#custom#noremap()|.  Example
-    to enable |gg|: >
-    call gram#custom#noremap('n', 'gg', 'gg')
-<
 
                                                     *gram#custom#unmap()*
 gram#custom#unmap({mode}, {lhs})
@@ -177,6 +193,25 @@ gram#custom#matcher_add({name}, {matcher}, {on-input})
     |gram-matcher| for the details.
 
 
+                                        *gram#custom#register_action()*
+gram#custom#register_action({id}, {mode}, {action})
+    TODO: write.
+
+                                        *gram#custom#unregister_action()*
+gram#custom#unregister_action({id}, {mode}, {action-name})
+    TODO: write.
+
+                                        *gram#custom#config_for_action_id()*
+gram#custom#config_for_action_id({id}, {config})
+    {NOT IMPLEMENTED YET}
+    Set config for additional actions that tied with {id}.
+    {config} is a |Dict| that has the following field:
+    - enable_on
+        Specify when actions available.  The available values are "self",
+        "everywhere", and "on_source".
+        If you specify "on_source", you have to contain the "source_list"
+        field that is a list of source names to enable actions on.
+
 
 ------------------------------------------------------------------------------
 OPTIONS                                           *gram-options*
@@ -185,9 +220,9 @@ OPTIONS                                           *gram-options*
 statusline  (Default: "%n(%i/%c)")
     |String|.
     You can use the following modifiers:
-        %n  the source name.  Becomes "[No name]" if it's omitted.
-        %c  count of the completion items
-        %i  index of the selecting item
+        %n  The source name.  Becomes "[No name]" if it's omitted.
+        %c  Count of the completion items
+        %i  Index of the selecting item
 
                                                 *gram-option-prompt*
 prompt  (Default: ">> ")
@@ -208,17 +243,12 @@ matcher  (Default: "multi_regexp")
     Specify a matcher to use.  See |gram-built-in-matchers| to know available
     built-in matchers.
 
-                                                *gram-option-nmapclear*
-enable_nmapclear  (Default: 1)
+                                                *gram-option-auto_preview*
+auto_preview  (Default: 0)
     |Number| or |Boolean|.
-    If this value is true, all mappings except for normal-mode this plugin's
-    are cleared.
-
-                                                *gram-option-imapclear*
-enable_imapclear  (Default: 1)
-    |Number| or |Boolean|.
-    If this value is true, all mappings for insert-mode except this plugin's
-    are cleared.
+    If this value is true and previewfunc is set by sources, the previewfunc
+    is called whenever you change the selecting item.  Otherwise, previewfunc
+    is called only by manually.
 
 ------------------------------------------------------------------------------
 AUTOCMD                                           *gram-autocmd*
@@ -304,10 +334,10 @@ ITEMS                                             *gram-item*
 CONFIGURATION-EXAMPLES                          *gram-configuration-examples*
 
 - Emacs like cursor moves in insert mode. >
-    call gram#custom#noremap('i', '<C-f>', '<Right>')
-    call gram#custom#noremap('i', '<C-b>', '<Left>')
-    call gram#custom#noremap('i', '<C-a>', '<C-o>0')
-    call gram#custom#noremap('i', '<C-e>', '<C-o>$')
+    call gram#custom#map_action('i', '<C-f>', 'move-to-right')
+    call gram#custom#map_action('i', '<C-b>', 'move-to-left')
+    call gram#custom#map_action('i', '<C-a>', 'move-to-head')
+    call gram#custom#map_action('i', '<C-e>', 'move-to-tail')
 <
 
 ==============================================================================
