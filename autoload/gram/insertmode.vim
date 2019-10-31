@@ -86,7 +86,7 @@ function! s:delete_word() abort
   call s:delete_string_by_regexp('\w\+\%#')
 endfunction
 
-function! s:delete_to_the_beginning() abort
+function! s:delete_to_head() abort
   let s:current_input.text = s:separate_input_at_cursor_idx()[1]
   let s:current_input.cursor_idx = 0
 endfunction

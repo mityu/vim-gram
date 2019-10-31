@@ -168,7 +168,7 @@ gram#custom#map_action({mode}, {lhs}, {action-name})
     move-to-tail            Move to the tail.
     delete-char             Delete a char.
     delete-word             Delete a word.
-    delete-to-the-beginning Delete all strings between the head and the
+    delete-to-head          Delete all strings between the head and the
                             cursor.
 
 

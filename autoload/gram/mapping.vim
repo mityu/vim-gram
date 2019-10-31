@@ -32,7 +32,7 @@ function! s:__init__() abort
         \ 'move-to-tail': s:insertmode.move_to_tail,
         \ 'delete-char': s:insertmode.delete_char,
         \ 'delete-word': s:insertmode.delete_word,
-        \ 'delete-to-the-beginning': s:insertmode.delete_to_the_beginning,
+        \ 'delete-to-head': s:insertmode.delete_to_head,
         \
         \ },
         \ }
