@@ -15,7 +15,6 @@ Describe gram
           \ })
 
     let s:getchar = gram#module#import('getchar')
-    let s:edit = gram#module#import('edit')
   End
 
   Describe getchar

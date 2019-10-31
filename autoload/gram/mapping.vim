@@ -6,7 +6,6 @@ function! s:__init__() abort
   const s:window = gram#module#import('window')
   const s:message = gram#module#import('message')
   const s:getchar = gram#module#import('getchar')
-  const s:edit = gram#module#import('edit')
   const s:insertmode = gram#module#import('insertmode')
   const s:impl = gram#module#import('impl')
 
