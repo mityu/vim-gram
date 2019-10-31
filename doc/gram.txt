@@ -274,8 +274,14 @@ gram.vim uses the following highlight groups for coloring texts.
 You can overwrite the default color settings just by setting colors via
 |:highlight|.
 
-gramMatch       (Default: Number highlight group)
+gramMatch       (Default: "Number" highlight group)
     The color to show matched strings.
+
+gramWindow      (Default: "Normal" highlight group)
+    The window color.
+
+gramWindowBorder    (Default: "Normal" highlight group with term=reverse)
+    The window's border color.
 
 ------------------------------------------------------------------------------
 BUILT-IN-MATCHERS                                   *gram-built-in-matchers*

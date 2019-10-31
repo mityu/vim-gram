@@ -288,7 +288,9 @@ endfunction
 
 if has('patch-8.1.1811')
   function! s:_set_window_color() abort
-    highlight link _gramWindow_ Normal
+    highlight link gramWindow Normal
+    highlight link gramWindowBorder Normal
+    highlight gramWindowBorder term=reverse cterm=reverse gui=reverse
   endfunction
 else
   function! s:_set_window_color() abort
@@ -307,7 +309,11 @@ else
       let hl_arg = 'NONE'
     endif
 
-    execute 'highlight _gramWindow_' hl_arg
+    execute 'highlight gramWindow' hl_arg
+
+
+    highlight link gramWindowBorder Normal
+    highlight gramWindowBorder term=reverse cterm=reverse gui=reverse
   endfunction
 endif
 

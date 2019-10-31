@@ -19,24 +19,28 @@ function! s:__init__() abort
   const s:completion_options = {
         \ 'pos': {-> 'topleft'},
         \ 'drag': {-> 0},
-        \ 'padding': {-> [0, 0, 0, 1]},
-        \ 'border': {-> [0, 0, 0, 1]},
-        \ 'borderchars': {-> ['', '', '', '|']},
+        \ 'scrollbar': {-> 0},
+        \ 'padding': {-> [0, 0, 0, 0]},
+        \ 'border': {-> [0, 1, 1, 1]},
+        \ 'borderchars': {-> [' ']},
+        \ 'borderhighlight': {-> ['gramWindowBorder']},
         \ 'callback': {-> 'gram#module#on_close'},
         \ 'cursorline': {-> 0},
-        \ 'highlight': {-> '_gramWindow_'},
+        \ 'highlight': {-> 'gramWindow'},
         \ 'zindex': {-> 100},
         \ }
   const s:prompt_options = {
         \ 'pos': {-> 'topleft'},
         \ 'drag': {-> 0},
-        \ 'border': {-> [0, 0, 0, 0]},
+        \ 'border': {-> [1, 1, 0, 1]},
+        \ 'borderchars': {-> [' ']},
+        \ 'borderhighlight': {-> ['gramWindowBorder']},
         \ 'cursorline': {-> 0},
-        \ 'highlight': {-> '_gramWindow_'},
+        \ 'highlight': {-> 'gramWindow'},
         \ 'zindex': {-> 100},
         \ 'minheight': {-> 1},
         \ 'maxheight': {-> 1},
-        \ 'title': {-> 'statusline'},
+        \ 'title': {-> ''},
         \ }
 endfunction
 
@@ -46,24 +50,25 @@ function! s:__on_close__() abort
   call s:_matchdelete(s:match_id.highlight, s:completion_winID)
   call popup_close(s:prompt_winID)
 
-  augroup gram-window
-    autocmd!
-  augroup END
+  " augroup gram-window
+  "   autocmd!
+  " augroup END
 endfunction
 
 function! s:foreground() abort
   let s:completion_winID =
-        \ popup_create([''], map(deepcopy(s:completion_options), 'v:val()'))
+        \ popup_create('', map(deepcopy(s:completion_options), 'v:val()'))
   let s:prompt_winID =
         \ popup_create('', map(deepcopy(s:prompt_options), 'v:val()'))
-  call s:_adjust_position()
 
+  " Set additional options.
+  call s:_adjust_position()
   call s:setvar('&cursorline', 1)
 
-  augroup gram-window
-    autocmd!
-    autocmd VimResized * call s:_adjust_position()
-  augroup END
+  " augroup gram-window
+  "   autocmd!
+  "   autocmd VimResized * call s:_adjust_position()
+  " augroup END
 endfunction
 
 function! s:background(...) abort
@@ -86,7 +91,7 @@ function! s:_adjust_position() abort
         \ 'maxwidth': width,
         \ 'minwidth': width,
         \ 'maxheight': height,
-        \ 'minheight': 0,
+        \ 'minheight': height,
         \ })
   call popup_move(s:prompt_winID, {
         \ 'line': line - 2,
