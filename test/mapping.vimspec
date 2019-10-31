@@ -44,10 +44,10 @@ Describe gram/mapping
     Before all
       call gram#module#import('mapping')  " Call __init__()
 
-      call s:mapping.noremap('n', 'a', 'aa')
-      call s:mapping.noremap('n', 'g', 'gg')
-      call s:mapping.noremap('n', 'ga', 'gga')
-      call s:mapping.noremap('n', 'gb', 'ggb')
+      call s:mapping.map_key('n', 'a', 'aa')
+      call s:mapping.map_key('n', 'g', 'gg')
+      call s:mapping.map_key('n', 'ga', 'gga')
+      call s:mapping.map_key('n', 'gb', 'ggb')
     End
 
     After all
@@ -60,14 +60,14 @@ Describe gram/mapping
     It returns {rhs} 1.
       call g:assert.equals(
             \ s:getchar._get_rhs('n', ['a']),
-            \ [{'key': ['aa'], 'kind': 'noremap'}, []]
+            \ [{'key': ['aa'], 'kind': 'map'}, []]
             \ )
     End
 
     It returns {rhs} 2.
       call g:assert.equals(
             \ s:getchar._get_rhs('n', ['a', 'a']),
-            \ [{'key': ['aa'], 'kind': 'noremap'}, ['a']]
+            \ [{'key': ['aa'], 'kind': 'map'}, ['a']]
             \ )
     End
 
@@ -81,14 +81,14 @@ Describe gram/mapping
     It returns {rhs} with its strchars({lhs}) >= 2.
       call g:assert.equals(
             \ s:getchar._get_rhs('n', ['g', 'a']),
-            \ [{'key': ['gga'], 'kind': 'noremap'}, []]
+            \ [{'key': ['gga'], 'kind': 'map'}, []]
             \ )
     End
 
     It doesn't return any keys if {lhs} isn't completed.
       call g:assert.equals(
             \ s:getchar._get_rhs('n', ['g']),
-            \ [{'key': [], 'kind': 'noremap'}, []]
+            \ [{'key': [], 'kind': 'wait_more_keys'}, []]
             \ )
     End
   End

@@ -20,6 +20,8 @@ Describe gram
   Describe getchar
     It is normal-mode first.
       call g:assert.equals(s:getchar.get_mode(), 'n')
+      call gram#custom#map_action('n', 'i', 'start-insert')
+      call gram#custom#map_action('i', '<Esc>', 'stop-insert')
     End
 
     It changes mode.
@@ -31,9 +33,12 @@ Describe gram
     End
   End
 
-  Describe edit
+  Describe insert-mode
     Before all
-      call gram#custom#noremap('i', '@', '<C-o>"_dd')
+      call gram#custom#map_action('i', '@', ['move-to-tail', 'delete-to-head'])
+      call gram#custom#map_action('n', 'i', 'start-insert')
+      call gram#custom#map_action('i', '<Esc>', 'stop-insert')
+      let s:insertmode = gram#module#import('insertmode')
     End
 
     Before each
@@ -42,17 +47,19 @@ Describe gram
 
     It gets a single input to filter items.
       execute "normal! ia\<ESC>"
-      call g:assert.equals(s:edit.get_input_info('text'), 'a')
+      call g:assert.equals(s:insertmode.get_input_text(), 'a')
     End
 
     It gets inputs to filter items.
       execute "normal! ia\<ESC>"
       execute "normal! ia\<ESC>"
-      call g:assert.equals(s:edit.get_input_info('text'), 'aa')
+      call g:assert.equals(s:insertmode.get_input_text(), 'aa')
     End
 
     After all
       call gram#custom#unmap('n', '@')
+      call gram#custom#unmap('i', '<Esc>')
+      call gram#custom#unmap('i', 'i')
     End
   End
 

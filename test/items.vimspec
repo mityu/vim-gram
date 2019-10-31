@@ -111,7 +111,9 @@ Describe filtering with matcher
     let g:StandardizeItems =
           \ themis#helper('scope').funcs('autoload/gram/impl.vim')._standardize_items
 
-    call gram#custom#noremap('i', '@', '<C-o>"_dd')
+    call gram#custom#map_action('i', '@', ['move-to-tail', 'delete-to-head'])
+    call gram#custom#map_action('n', 'i', 'start-insert')
+    call gram#custom#map_action('i', '<Esc>', 'stop-insert')
   End
 
   Before each
