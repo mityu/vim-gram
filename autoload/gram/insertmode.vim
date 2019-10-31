@@ -62,7 +62,7 @@ endfunction
 
 function! s:delete_string_by_regexp(regexp) abort
   let sub = '\\%' .. (s:current_input.cursor_idx + 1) .. 'c'
-  let regexp = substitute(a:regexp, '\v%(\\\\)*\zs\\\%#', sub, 'g')
+  let regexp = substitute(a:regexp, '\v%(^|[^\\])%(\\\\)*\zs\\\%#', sub, 'g')
   let [matchstr, match_start, match_end] =
         \ matchstrpos(s:current_input.text, regexp)
   if match_start == -1
@@ -83,7 +83,7 @@ function! s:delete_char() abort
 endfunction
 
 function! s:delete_word() abort
-  call s:delete_string_by_regexp('\w\+\%#')
+  call s:delete_string_by_regexp('\w\+\s*\%#')
 endfunction
 
 function! s:delete_to_head() abort
