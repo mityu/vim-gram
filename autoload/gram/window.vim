@@ -50,9 +50,9 @@ function! s:__on_close__() abort
   call s:_matchdelete(s:match_id.highlight, s:completion_winID)
   call popup_close(s:prompt_winID)
 
-  " augroup gram-window
-  "   autocmd!
-  " augroup END
+  augroup gram-window
+    autocmd!
+  augroup END
 endfunction
 
 function! s:foreground() abort
@@ -65,10 +65,10 @@ function! s:foreground() abort
   call s:_adjust_position()
   call s:setvar('&cursorline', 1)
 
-  " augroup gram-window
-  "   autocmd!
-  "   autocmd VimResized * call s:_adjust_position()
-  " augroup END
+  augroup gram-window
+    autocmd!
+    autocmd VimResized * call s:_adjust_position()
+  augroup END
 endfunction
 
 function! s:background(...) abort
