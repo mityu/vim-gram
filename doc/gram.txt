@@ -279,6 +279,7 @@ gramMatch       (Default: "Number" highlight group)
 
 gramWindow      (Default: "Normal" highlight group)
     The window color.
+    NOTE: It doesn't work without patch-8.1.1811.
 
 gramWindowBorder    (Default: "Normal" highlight group with term=reverse)
     The window's border color.

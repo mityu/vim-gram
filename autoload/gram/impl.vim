@@ -288,9 +288,11 @@ endfunction
 
 if has('patch-8.1.1811')
   function! s:_set_window_color() abort
-    highlight link gramWindow Normal
-    highlight link gramWindowBorder Normal
-    highlight gramWindowBorder term=reverse cterm=reverse gui=reverse
+    highlight default link gramWindow Normal
+    if !hlexists('gramWindowBorder')
+      highlight link gramWindowBorder Normal
+      highlight gramWindowBorder term=reverse cterm=reverse gui=reverse
+    endif
   endfunction
 else
   function! s:_set_window_color() abort
@@ -312,8 +314,10 @@ else
     execute 'highlight gramWindow' hl_arg
 
 
-    highlight link gramWindowBorder Normal
-    highlight gramWindowBorder term=reverse cterm=reverse gui=reverse
+    if !hlexists('gramWindowBorder')
+      highlight link gramWindowBorder Normal
+      highlight gramWindowBorder term=reverse cterm=reverse gui=reverse
+    endif
   endfunction
 endif
 
