@@ -45,7 +45,9 @@ function! s:_getchar.callback(winid, idx) abort
 endfunction
 function! s:_getchar.filter(winid, char) abort
   call s:_evaluate_keys([a:char])
-  call s:impl.draw_statusline()
+  if gram#is_active()
+    call s:impl.draw_statusline()
+  endif
   return 1
 endfunction
 function! s:_getchar.finish() abort

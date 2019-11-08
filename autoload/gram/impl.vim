@@ -18,6 +18,14 @@ function! s:__init__() abort
   let s:source_config = {}
   let s:matcher_handler = {'timer_id': 0, 'items_queue': []}
   let s:selected_item = {}
+
+
+  const s:statusline_modifiers = {
+        \ 'n': {-> get(s:source_config, 'name', '[No name]')},
+        \ 'c': {-> s:window.line('$') - empty(gram#get_items('matched'))},
+        \ 'i': {-> s:window.line('.') - empty(gram#get_items('matched'))},
+        \ '%': {-> '%'},
+        \ }
 endfunction
 
 function! s:__on_close__() abort
@@ -196,17 +204,31 @@ function! s:draw_statusline() abort
 endfunction
 
 function! s:generate_statusline() abort
-  const modifiers = {
-        \ '%n': get(s:source_config, 'name', "[No name]"),
-        \ '%c': s:window.execute_func({-> line('$') - empty(gram#get_items('matched'))}),
-        \ '%i': s:window.execute_func({-> line('.') - empty(gram#get_items('matched'))}),
-        \ }
-  return substitute(
-        \ s:option.get_option('statusline'),
-        \ join(keys(modifiers), '\|'),
-        \ '\=modifiers[submatch(0)]',
-        \ 'g'
-        \ )
+  " TODO: implement '%>'
+  let modifier_head = '\v%(^|[^\%])%(\%\%)*\zs\%'
+  let statusline = split(s:option.get_option('statusline'),
+        \ modifier_head .. '\=')
+  if len(statusline) >= 3
+    call s:message.echomsg_warning(
+          \ 'Invalid option value for "statusline":' ..
+          \ s:option.get_option('statusline'))
+    return s:statusline_modifiers.n()  " Show source name in default.
+  endif
+  let modifier_pat = modifier_head ..
+        \ '%(' .. escape(join(keys(s:statusline_modifiers), '|'), '%') .. ')'
+  call map(statusline, {idx, val->
+        \ substitute(val, modifier_pat,
+        \ '\=s:statusline_modifiers[submatch(0)[1 :]]()', 'g')
+        \ })
+
+  let window_width = popup_getpos(s:window.get_winID()).width
+  let right_width = strdisplaywidth(statusline[0])
+  if get(statusline, 1, '') !=# ''
+    let left_width = strdisplaywidth(statusline[1])
+    let spacer = repeat(' ', window_width - (right_width + left_width))
+    return statusline[0] .. spacer .. statusline[1]
+  endif
+  return statusline[0]
 endfunction
 
 function! s:on_cursor_moved() abort

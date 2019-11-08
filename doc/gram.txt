@@ -219,10 +219,12 @@ OPTIONS                                           *gram-options*
                                                 *gram-option-statusline*
 statusline  (Default: "%n(%i/%c)")
     |String|.
+    Set a text of statusline that is shown on the top of the window.
     You can use the following modifiers:
         %n  The source name.  Becomes "[No name]" if it's omitted.
-        %c  Count of the completion items
-        %i  Index of the selecting item
+        %c  Count of the completion items.
+        %i  Index of the selecting item.
+        %=  Separation point between left and right aligned items.
 
                                                 *gram-option-prompt*
 prompt  (Default: ">> ")
@@ -384,7 +386,6 @@ TODO                                                *gram-todo*
 * Add tests.
 * Add default matchers.
 * Add default sources. (They should be other plugins?)
-* Add modifiers for |gram-option-statusline|.
 * Handle [count].
 * Use 'timeoutlen'.
 * Be flexible.
