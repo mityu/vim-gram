@@ -217,7 +217,7 @@ gram#custom#config_for_action_id({id}, {config})
 OPTIONS                                           *gram-options*
 
                                                 *gram-option-statusline*
-statusline  (Default: "%n(%i/%c)")
+statusline  (Default: "%n%<%=(%i/%c)")
     |String|.
     Set a text of statusline that is shown on the top of the window.
     You can use the following modifiers:
@@ -225,6 +225,7 @@ statusline  (Default: "%n(%i/%c)")
         %c  Count of the completion items.
         %i  Index of the selecting item.
         %=  Separation point between left and right aligned items.
+        %<  Truncation point if statusline is too long.
 
                                                 *gram-option-prompt*
 prompt  (Default: ">> ")
