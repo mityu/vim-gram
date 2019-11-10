@@ -8,7 +8,7 @@ function! s:__init__() abort
   let s:source_option = {}
   let s:user_option = {}
   const s:default_option = {
-        \ 'statusline': '%n(%i/%c)',
+        \ 'statusline': '%n%<%=(%i/%c)',
         \ 'prompt': '>> ',
         \ 'force_refresh': 0,
         \ 'matcher': 'multi_regexp',

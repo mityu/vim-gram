@@ -18,6 +18,13 @@ function! s:__init__() abort
   let s:source_config = {}
   let s:matcher_handler = {'timer_id': 0, 'items_queue': []}
   let s:selected_item = {}
+
+
+  const s:statusline_modifiers = {
+        \ 'n': {-> get(s:source_config, 'name', '[No name]')},
+        \ 'c': {-> s:window.line('$') - empty(gram#get_items('matched'))},
+        \ 'i': {-> s:window.line('.') - empty(gram#get_items('matched'))},
+        \ }
 endfunction
 
 function! s:__on_close__() abort
@@ -196,17 +203,71 @@ function! s:draw_statusline() abort
 endfunction
 
 function! s:generate_statusline() abort
-  const modifiers = {
-        \ '%n': get(s:source_config, 'name', "[No name]"),
-        \ '%c': s:window.execute_func({-> line('$') - empty(gram#get_items('matched'))}),
-        \ '%i': s:window.execute_func({-> line('.') - empty(gram#get_items('matched'))}),
-        \ }
-  return substitute(
-        \ s:option.get_option('statusline'),
-        \ join(keys(modifiers), '\|'),
-        \ '\=modifiers[submatch(0)]',
-        \ 'g'
-        \ )
+  const modifiers = map(copy(s:statusline_modifiers), 'v:val()')
+  let statusconf = s:option.get_option('statusline')
+  let statusline = ''
+  let stridx = {'separation': -1, 'truncation': -1}
+
+  let mod_width = 2
+  while v:true
+    let pos = match(statusconf, '%.')
+    if pos == -1
+      let statusline ..= statusconf
+      break
+    endif
+
+    " Don't use slice because pos can be 0.
+    let statusline ..= strpart(statusconf, 0, pos)
+
+    let mod = strpart(statusconf, pos + 1, mod_width - 1)
+    if mod ==# '='
+      if stridx.separation == -1
+        let stridx.separation = strlen(statusline)
+      endif
+    elseif mod ==# '<'
+      if stridx.truncation == -1
+        let stridx.truncation = strlen(statusline)
+      endif
+    elseif has_key(modifiers, mod)
+      let statusline ..= modifiers[mod]
+    else
+      let statusline ..= mod
+    endif
+
+    if (pos + mod_width) >= strlen(statusconf)
+      break
+    endif
+    let statusconf = statusconf[pos + mod_width :]
+  endwhile
+  unlet mod_width
+
+  let max_width = popup_getpos(s:window.get_winID()).core_width
+  let statusline_width = strwidth(statusline)
+  if statusline_width < max_width
+    if stridx.separation != -1
+      let statusline = statusline[: stridx.separation - 1] ..
+            \ repeat(' ', max_width - statusline_width) ..
+            \ statusline[stridx.separation :]
+    endif
+  elseif statusline_width > max_width
+    if stridx.truncation == -1
+      let stridx.truncation = 0
+    endif
+    let left = strpart(statusline, 0, stridx.truncation)
+    let right = statusline[stridx.truncation :]
+    let reduce_len = statusline_width - max_width + 1
+
+    if reduce_len > strlen(right)
+      let reduce_len -= strlen(right)
+      let left = strpart(left, 0, strlen(left) - reduce_len)
+
+      let statusline = left .. '>'
+    else
+      let right = right[reduce_len :]
+      let statusline = left .. '<' .. right
+    endif
+  endif
+  return statusline
 endfunction
 
 function! s:on_cursor_moved() abort
