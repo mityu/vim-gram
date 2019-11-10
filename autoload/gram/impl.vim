@@ -24,7 +24,6 @@ function! s:__init__() abort
         \ 'n': {-> get(s:source_config, 'name', '[No name]')},
         \ 'c': {-> s:window.line('$') - empty(gram#get_items('matched'))},
         \ 'i': {-> s:window.line('.') - empty(gram#get_items('matched'))},
-        \ '%': {-> '%'},
         \ }
 endfunction
 
@@ -204,31 +203,71 @@ function! s:draw_statusline() abort
 endfunction
 
 function! s:generate_statusline() abort
-  " TODO: implement '%>'
-  let modifier_head = '\v%(^|[^\%])%(\%\%)*\zs\%'
-  let statusline = split(s:option.get_option('statusline'),
-        \ modifier_head .. '\=')
-  if len(statusline) >= 3
-    call s:message.echomsg_warning(
-          \ 'Invalid option value for "statusline":' ..
-          \ s:option.get_option('statusline'))
-    return s:statusline_modifiers.n()  " Show source name in default.
-  endif
-  let modifier_pat = modifier_head ..
-        \ '%(' .. escape(join(keys(s:statusline_modifiers), '|'), '%') .. ')'
-  call map(statusline, {idx, val->
-        \ substitute(val, modifier_pat,
-        \ '\=s:statusline_modifiers[submatch(0)[1 :]]()', 'g')
-        \ })
+  const modifiers = map(copy(s:statusline_modifiers), 'v:val()')
+  let statusconf = s:option.get_option('statusline')
+  let statusline = ''
+  let stridx = {'separation': -1, 'truncation': -1}
 
-  let window_width = popup_getpos(s:window.get_winID()).width
-  let right_width = strdisplaywidth(statusline[0])
-  if get(statusline, 1, '') !=# ''
-    let left_width = strdisplaywidth(statusline[1])
-    let spacer = repeat(' ', window_width - (right_width + left_width))
-    return statusline[0] .. spacer .. statusline[1]
+  let mod_width = 2
+  while v:true
+    let pos = match(statusconf, '%.')
+    if pos == -1
+      let statusline ..= statusconf
+      break
+    endif
+
+    " Don't use slice because pos can be 0.
+    let statusline ..= strpart(statusconf, 0, pos)
+
+    let mod = strpart(statusconf, pos + 1, mod_width - 1)
+    if mod ==# '='
+      if stridx.separation == -1
+        let stridx.separation = strlen(statusline)
+      endif
+    elseif mod ==# '<'
+      if stridx.truncation == -1
+        let stridx.truncation = strlen(statusline)
+      endif
+    elseif has_key(modifiers, mod)
+      let statusline ..= modifiers[mod]
+    else
+      let statusline ..= mod
+    endif
+
+    if (pos + mod_width) >= strlen(statusconf)
+      break
+    endif
+    let statusconf = statusconf[pos + mod_width :]
+  endwhile
+  unlet mod_width
+
+  let max_width = popup_getpos(s:window.get_winID()).core_width
+  let statusline_width = strwidth(statusline)
+  if statusline_width < max_width
+    if stridx.separation != -1
+      let statusline = statusline[: stridx.separation - 1] ..
+            \ repeat(' ', max_width - statusline_width) ..
+            \ statusline[stridx.separation :]
+    endif
+  elseif statusline_width > max_width
+    if stridx.truncation == -1
+      let stridx.truncation = 0
+    endif
+    let left = strpart(statusline, 0, stridx.truncation)
+    let right = statusline[stridx.truncation :]
+    let reduce_len = statusline_width - max_width + 1
+
+    if reduce_len > strlen(right)
+      let reduce_len -= strlen(right)
+      let left = strpart(left, 0, strlen(left) - reduce_len)
+
+      let statusline = left .. '>'
+    else
+      let right = right[reduce_len :]
+      let statusline = left .. '<' .. right
+    endif
   endif
-  return statusline[0]
+  return statusline
 endfunction
 
 function! s:on_cursor_moved() abort
