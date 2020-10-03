@@ -10,6 +10,7 @@ function! s:__init__() abort
         \ 'cursor': -1,
         \ 'highlight': -1
         \ }
+  let s:cursor_line = 1
 
   const s:message = gram#module#import('message')
   const s:GetOption = gram#module#import('option').get_option
@@ -42,6 +43,8 @@ function! s:__init__() abort
         \ 'maxheight': {-> 1},
         \ 'title': {-> ''},
         \ }
+
+  call sign_define('gramCursorline', {'text': '>', 'linehl': 'Cursorline'})
 endfunction
 
 function! s:__on_close__() abort
@@ -63,7 +66,6 @@ function! s:foreground() abort
 
   " Set additional options.
   call s:_adjust_position()
-  call s:setvar('&cursorline', 1)
 
   augroup gram-window
     autocmd!
@@ -222,14 +224,16 @@ function! s:getvar(name, ...) abort
 endfunction
 
 function! s:set_cursor_line(line) abort
-  call s:execute_func(function('cursor', [a:line, 1]))
-
-  " Force to update the display.  I don't know why but without this :redraw
-  " command, the cursor line isn't updated correctly.
-  call s:execute('redraw')
+  " TODO: implement scroll
+  let s:cursor_line = a:line
+  call sign_unplace('PopUpMenu', {'buffer': s:get_bufnr()})
+  call sign_place(0, 'PopUpMenu', 'gramCursorline', s:get_bufnr(), {'lnum': a:line})
 endfunction
 
 function! s:line(expr) abort
+  if a:expr ==# '.'
+    return s:cursor_line
+  endif
   return line(a:expr, s:get_winID())
 endfunction
 
