@@ -16,7 +16,7 @@ function! s:__init__() abort
   let s:default_option = {}
   let s:context = {}
   let s:source_config = {}
-  let s:matcher_handler = {'timer_id': 0, 'items_queue': []}
+  let s:matcher_items_queue = []
   let s:selected_item = {}
 
 
@@ -155,7 +155,7 @@ endfunction
 
 function! s:_filter_all_items() abort
   call s:_set_completion([])
-  let s:matcher_handler.items_queue = []
+  let s:matcher_items_queue = []
   call s:_trigger_matcher(s:context.items.base)
 endfunction
 
@@ -290,34 +290,22 @@ endfunction
 " Call matcher function asynchronously by using timer.
 function! s:_trigger_matcher(items) abort
   if s:getchar.get_input() ==# ''
-    call s:_pause_matcher()
     call s:_add_completion(a:items)
     return
   endif
-  let s:matcher_handler.items_queue += deepcopy(a:items)
-  if s:matcher_handler.timer_id == 0
-    let s:matcher_handler.timer_id =
-          \ timer_start(0, funcref('s:_call_matcher'), {'repeat': -1})
-  else
-    call timer_pause(s:matcher_handler.timer_id, 0)
-  endif
-endfunction
+  let s:matcher_items_queue += deepcopy(a:items)
+  let completion = []
 
-function! s:_call_matcher(timer) abort
-  if empty(s:matcher_handler.items_queue) || !gram#is_active()
-    call s:_pause_matcher()
-    return
-  endif
-
-  let item = remove(s:matcher_handler.items_queue, 0)
-  if s:matcher.invoke_matcher(item)
-    call s:_add_completion([item])
-  endif
-endfunction
-
-function! s:_pause_matcher() abort
-  let s:matcher_handler.items_queue = []
-  call timer_pause(s:matcher_handler.timer_id, 1)
+  for item in s:matcher_items_queue
+    if getchar(1)
+      let s:matcher_items_queue = []
+      return
+    endif
+    if s:matcher.invoke_matcher(item)
+      call add(completion, item)
+    endif
+  endfor
+  call s:_add_completion(completion)
 endfunction
 
 function! s:_set_completion(items) abort
