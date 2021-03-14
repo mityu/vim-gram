@@ -32,10 +32,9 @@ function! s:__on_close__() abort
 endfunction
 
 function! s:set_selected_item(selected_idx) abort
+  let s:selected_item = {}
   if a:selected_idx >= 0
     let s:selected_item = s:context.items.matched[a:selected_idx]
-  else
-    let s:selected_item = {}
   endif
 endfunction
 
@@ -278,6 +277,7 @@ function! s:on_cursor_moved() abort
 endfunction
 
 function! s:on_input_changed(input, curcol) abort
+  call s:window.set_cursor_line(1)
   call s:matcher.invoke_on_input(a:input)
   if s:option.get_option('force_refresh')
     call s:invoke_completefunc(a:input)

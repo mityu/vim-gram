@@ -52,6 +52,7 @@ function! s:__on_close__() abort
   call s:_matchdelete(s:match_id.cursor, s:prompt_winID)
   call s:_matchdelete(s:match_id.highlight, s:completion_winID)
   call popup_close(s:prompt_winID)
+  call s:set_cursor_line(1)
 
   augroup gram-window
     autocmd!
