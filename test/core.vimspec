@@ -1,0 +1,112 @@
+Describe gram/core.vim
+  Context one source
+    Before all
+      call gram#source#register('test', {
+            \ 'gather_candidates': {c -> c.add(['aaa', 'bbb', 'ccc'])}
+            \ })
+      call gram#matcher#register('stridx', {
+            \ 'match': {items, input, callback ->
+            \       callback(filter(items, 'stridx(v:val, input) >= 0'))}
+            \ })
+      call gram#core#setup({'sources': [{'name': 'test', 'matcher': 'stridx'}]})
+    End
+
+    After all
+      call gram#matcher#clear()
+      call gram#source#clear()
+      call gram#core#quit()
+    End
+
+    Before each
+      call gram#core#clear_candidates('test')
+      call gram#core#clear_matched_items('test')
+    End
+
+    It gathers candidates
+      call gram#core#gather_candidates()
+      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
+      call gram#core#gather_candidates()
+      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
+    End
+
+    It filters candidates
+      call gram#core#gather_candidates()
+      call gram#core#invoke_matcher_with_filter_text('a')
+      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
+      Assert Equals(['aaa'], gram#core#get_matched_items('test'))
+      " TODO: item queue should be refreshed when fillter-text is changed.
+      " call gram#core#invoke_matcher_with_filter_text('a')
+      " Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
+      " Assert Equals(['aaa'], gram#core#get_matched_items('test'))
+    End
+  End
+
+  Context multiple source
+    Before all
+      let g:source_called_order = []
+      function GatherCandidates(id, c) abort
+        call add(g:source_called_order, a:id)
+        call call(a:c.add, [['aaa', 'bbb', 'ccc']])
+      endfunction
+
+      let g:matcher_called_order = []
+      function Match(id, items, input, callback) abort
+        call add(g:matcher_called_order, a:id)
+        call call(a:callback, [filter(a:items, 'stridx(v:val, a:input) >= 0')])
+      endfunction
+
+      let g:sources = []
+      for g:i in range(3)
+        call gram#source#register('test' .. g:i, {
+              \ 'gather_candidates': funcref('GatherCandidates', [g:i])
+              \ })
+        call gram#matcher#register('stridx' .. g:i, {
+              \ 'match': funcref('Match', [g:i])
+            \ })
+        call add(g:sources, {'name': 'test' .. g:i, 'matcher': 'stridx' .. g:i})
+      endfor
+      call gram#core#setup({'sources': g:sources})
+      unlet g:i
+      unlet g:sources
+    End
+
+    After all
+      unlet g:source_called_order
+      unlet g:matcher_called_order
+      delfunction GatherCandidates
+      call gram#matcher#clear()
+      call gram#source#clear()
+      call gram#core#quit()
+    End
+
+    Before each
+      for c in ['test0', 'test1', 'test2']
+        call gram#core#clear_candidates(c)
+        call gram#core#clear_matched_items(c)
+      endfor
+      let g:source_called_order = []
+      let g:matcher_called_order = []
+    End
+
+    It lists active sources
+      Assert Equals(gram#core#get_active_sources(), ['test0', 'test1', 'test2'])
+    End
+
+    It gathers candidates from sources in specified order
+      call gram#core#gather_candidates()
+      Assert Equals(g:source_called_order, range(3))
+      for c in ['test0', 'test1', 'test2']
+        Assert Equals(gram#core#get_candidates(c), ['aaa', 'bbb', 'ccc'])
+      endfor
+    End
+
+    It filters items in source priority order
+      call gram#core#gather_candidates()
+      call gram#core#invoke_matcher_with_filter_text('b')
+      Assert Equals(g:matcher_called_order, range(3))
+      for c in ['test0', 'test1', 'test2']
+        Assert Equals(gram#core#get_matched_items(c), ['bbb'])
+      endfor
+    End
+  End
+End

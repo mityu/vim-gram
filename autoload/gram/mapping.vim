@@ -1,214 +1,190 @@
-scriptversion 3
-let s:cpoptions_save = &cpoptions
-set cpoptions&vim
+scriptversion 4
 
-function! s:__init__() abort
-  const s:window = gram#module#import('window')
-  const s:message = gram#module#import('message')
-  const s:getchar = gram#module#import('getchar')
-  const s:insertmode = gram#module#import('insertmode')
-  const s:impl = gram#module#import('impl')
+let s:input_queue = ''
+let s:current_mode = ''
+let s:maptree = {
+      \'rhs': {},
+      \'submap': {},
+      \}
+let s:maptree_sets = {}  " {mode: s:maptree}
+
+" How to hold mappings:
+" In 'rhs' key value, we hold mapping's right-hand-side infomation:
+"   - nomore (boolean) ... If this is TRUE, we have no need to search more.
+"   - mapto  (string)  ... What is mapped to
+" If this component is empty, it means nothing is mapped.
+"
+" In 'submap' key value, the s:maptree structure appears again. Like this,
+" the structure of s:maptree appears in itself recursively.
+"
+" Example)
+"  call gram#mapping#nnoremap('i', 'ab', 'rhs-of-a')
+"  => s:maptree_sets['i'] will be:
+"  {
+"     'rhs': {},
+"     'submap': {
+"       'a': {
+"         'rhs': {},
+"         'submap': {
+"           'b': {
+"             'rhs': {
+"               'nomore': 1,
+"               'mapto': 'rhs-of-a',
+"             },
+"             'submap': {}
+"           }
+"         }
+"       }
+"     }
+"  }
+" TODO: There's no need to separate 'rhs' because keys except for 'rhs' is
+" must just one character. So we can hold mapping like this:
+" {
+"   'a': {
+"     'b': {
+"       'rhs': {
+"         'nomore': 1,
+"         'mapto': 'rhs-of-a'
+"       }
+"     }
+"   }
+" }
+" We can figure out whether the mapping exist or not by checking
+" has_key(tree, 'rhs') is TRUE or not.
 
 
-  const s:default_action = {
-        \ 'n': {
-        \
-        \ 'quit': {-> s:window.background(-1)},
-        \ 'select-item': {-> s:window.background(s:window.line('.') - 1)},
-        \ 'select-next-item': function('s:n_action_select_next_item'),
-        \ 'select-prev-item': function('s:n_action_select_prev_item'),
-        \ 'preview': s:impl.invoke_previewfunc,
-        \ 'start-insert': s:getchar.start_insert,
-        \
-        \ },
-        \
-        \ 'i': {
-        \
-        \ 'stop-insert': s:getchar.stop_insert,
-        \ 'cancel-insert': s:getchar.cancel_insert,
-        \ 'move-to-right': s:insertmode.move_to_right,
-        \ 'move-to-left': s:insertmode.move_to_left,
-        \ 'move-to-head': s:insertmode.move_to_head,
-        \ 'move-to-tail': s:insertmode.move_to_tail,
-        \ 'delete-char': s:insertmode.delete_char,
-        \ 'delete-word': s:insertmode.delete_word,
-        \ 'delete-to-head': s:insertmode.delete_to_head,
-        \
-        \ },
-        \ }
-
-  const s:action_helper = {
-        \ 'n': {
-        \ },
-        \ 'i': {
-        \ 'delete-by-regexp': s:insertmode.delete_string_by_regexp,
-        \ 'input-string': s:insertmode.insert_string,
-        \ },
-        \}
-
-
-  const s:map_node_base = {'rhs': {'key': 0, 'kind': ''}}
-  let s:usermap = {'n': copy(s:map_node_base), 'i': copy(s:map_node_base)}
-
-
-  let s:useraction = {'n': {}, 'i': {}}
-  const s:useraction_default_config = {'enable_on': 'self'}
-  let s:useraction_config = {}
-endfunction
-
-function! s:map_key(mode, lhs, rhs) abort
-  call s:_map_impl('map', a:mode, a:lhs, a:rhs)
-endfunction
-
-function! s:map_action(mode, lhs, action_name) abort
-  call s:_map_impl('action', a:mode, a:lhs, a:action_name)
-endfunction
-
-function! s:_map_impl(kind, mode, lhs, rhs) abort
-  " Unify a:rhs here.
-  if type(a:rhs) == v:t_string
-    let rhs = [s:_unify_mapchar(a:rhs)]
-  elseif type(a:rhs) == v:t_list
-    let rhs = map(copy(a:rhs), 's:_unify_mapchar(v:val)')
-  else
-    call s:message.echomsg_error('Invalid {rhs}: ' .. string(a:rhs))
-    return
+function! gram#mapping#add_mode(mode) abort
+  if !has_key(s:maptree_sets, a:mode)
+    let s:maptree_sets[a:mode] = deepcopy(s:maptree)
   endif
+endfunction
 
-  let sequence = split(s:_unify_mapchar(a:lhs), '\zs')
-  let node = s:usermap[a:mode]
-  for key in sequence
-    if !has_key(node, key)
-      let node[key] = deepcopy(s:map_node_base)
+" rhs must be a string (action-name for :noremap or new lhs for :map)
+function! gram#mapping#noremap(mode, lhs, rhs) abort
+  call s:map(1, a:mode, a:lhs, a:rhs)
+endfunction
+
+function! gram#mapping#map(mode, lhs, rhs) abort
+  call s:map(0, a:mode, a:lhs, a:rhs)
+endfunction
+
+function! gram#mapping#add_typed_key(s) abort
+  let s:input_queue ..= a:s
+endfunction
+
+function! gram#mapping#lookup_mapping() abort
+  let r = s:lookup_mapping(s:current_mode, s:input_queue)
+  if r.completed
+    let s:input_queue = r.rest
+    return r.rhs
+  endif
+  return ''
+endfunction
+
+function! gram#mapping#switch_mode(mode) abort
+  let s:current_mode = a:mode
+endfunction
+
+function! gram#mapping#get_mode() abort
+  return s:current_mode
+endfunction
+
+function! s:map(nomore, mode, lhs, rhs) abort
+  let lhs = s:unify_specialchar(a:lhs)
+  let tree = s:maptree_sets[a:mode]
+  for c in split(lhs, '\zs')
+    if !has_key(tree.submap, c)
+      let tree.submap[c] = deepcopy(s:maptree)
     endif
-    let node = node[key]
+    let tree = tree.submap[c]
   endfor
-  let node.rhs.key = rhs
-  let node.rhs.kind = a:kind
+  let tree.rhs = {
+        \'nomore': a:nomore,
+        \'mapto': s:unify_specialchar(a:rhs),
+        \}
 endfunction
 
-function! s:unmap(mode, lhs) abort
-  try
-    let node = s:usermap[a:mode]
-    let keys = split(s:_unify_mapchar(a:lhs), '\zs')
-    for key in keys[: -2]
-      let node = node[key]
-    endfor
-    call remove(node, keys[-1])
-  catch /^Vim\%((\a\+)\)\=:E716:/  " s:lhs not found in s:map
-    call s:message.echomsg_error('gram#custom#unmap(): {lhs} not found: ' ..
-          \ a:lhs)
-  endtry
+" mode: string
+" input: string (TODO: list<string> is better?)
+function! s:lookup_mapping(mode, input) abort
+  " TODO: Set safety for recursive mapping; loopCountMax variable
+  " TODO: Rename `rest` to `unprocessed`
+  let input = s:unify_specialchar(a:input)
+  let tree = s:maptree_sets[a:mode]
+  let sequence = split(input, '\zs')
+  let processed = ''
+  while !empty(sequence)
+    let c = remove(sequence, 0)
+    let processed ..= c
+    if !has_key(tree.submap, c)
+      if empty(tree.rhs)
+        return {
+              \'completed': 1,
+              \'rhs': processed,
+              \'rest': join(sequence, ''),
+              \}
+      else
+        if tree.rhs.nomore
+          return {
+                \'completed': 1,
+                \'rhs': tree.rhs.mapto,
+                \'rest': join(sequence, ''),
+                \}
+        endif
+        let sequence = split(tree.rhs.mapto, '\zs') + sequence
+        let processed = ''
+        let tree = s:maptree_sets[a:mode]
+      endif
+    else
+      let tree = tree.submap[c]
+      if empty(tree.submap)
+        if tree.rhs.nomore
+            return {
+                  \'completed': 1,
+                  \'rhs': tree.rhs.mapto,
+                  \'rest': join(sequence, ''),
+                  \}
+        else
+          let sequence = split(tree.rhs.mapto, '\zs') + sequence
+          let processed = ''
+          let tree = s:maptree_sets[a:mode]
+        endif
+      endif
+    endif
+  endwhile
+  return {
+        \'completed': 0,
+        \'rhs': '',
+        \'rest': a:input,
+        \}
 endfunction
 
-function! s:_unify_mapchar(map) abort
+function! s:unify_specialchar(map) abort
   return substitute(a:map, '<.\{-}>',
-        \ '\=s:_get_escaped_mapchar(submatch(0))', 'g')
+        \ '\=s:escape_specialchar(submatch(0))', 'g')
 endfunction
 
-function! s:_get_escaped_mapchar(key) abort
-  return eval(printf('"%s"', '\' .. a:key))
+function! s:escape_specialchar(c) abort
+  return eval(printf('"%s"', '\' .. a:c))
 endfunction
 
-function! s:get_usermap() abort
-  return s:usermap
+function! gram#mapping#_get_input_queue() abort
+  return s:input_queue
 endfunction
 
-" @param
-" id: Works like namespace.
-" mode: 'n' for normal-mode, and 'i' for insert-mode.
-" action: Dictionary of action infomation. The dictionary should be one of the
-" following:
-"   - {'name': <name>, 'kind': 'function', 'function': <Funcref/String>}
-"   - {'name': <name>, 'kind': 'helper', 'helper_name': <helper-name>,
-"     'helper_args': <list of args-for-helper>}
-function! s:register_action(id, mode, action) abort
-  if stridx(a:id, ':') != -1
-    call s:message.echoerr_msg('register_action: id cannot contain ":."')
-    return
-  endif
-  if !has_key(s:useraction_config, a:id)
-    let s:useraction_config[a:id] = deepcopy(s:useraction_default_config)
-  endif
-  if !has_key(s:useraction[a:mode], a:id)
-    let s:useraction[a:mode][a:id] = {}
-  endif
-  let node = s:useraction[a:mode][a:id]
-
-  if a:action.kind ==# 'function'
-    let node[a:action.name] = a:action.function
-  elseif a:action.kind ==# 'helper'
-    if !has_key(s:action_helper[a:mode], a:action.helper_name)
-      return
-    endif
-    let node[a:action.name] = function(
-          \ s:action_helper[a:mode][a:action.helper_name],
-          \ a:action.helper_args)
-  else
-    return
-  endif
+function! gram#mapping#_clear_input_queue() abort
+  let s:input_queue = ''
 endfunction
 
-function! s:unregister_action(id, mode, action_name) abort
-  try
-    let node = s:useraction[a:mode][a:id]
-    call remove(node, a:action_name)
-  catch
-    call s:message.echomsg_error(v:exception)
-    return v:false
-  endtry
-  return v:true
+function! gram#mapping#_clear_mapping(mode) abort
+  call remove(s:maptree_sets, a:mode)
+  call gram#mapping#add_mode(a:mode)
 endfunction
 
-function! s:config_for_action_id(id, config) abort
-  let s:useraction_config[a:id] = deepcopy(a:config)
+function! gram#mapping#_clear_entire_mapping() abort
+  let s:maptree_sets = {}
 endfunction
 
-function! s:get_action_function_from_action_name(mode, action_name) abort
-  " TODO: Check if the action is available with the current source or not.
-  if stridx(a:action_name, ':') == -1
-    " It's a built-in action.
-    if !has_key(s:default_action[a:mode], a:action_name)
-      call s:message.echomsg_error('Unknown action name: ' .. a:action_name)
-      return
-    endif
-    return s:default_action[a:mode][a:action_name]
-  else
-    " It's a user-defined action.
-    let [id; name] = split(a:action_name, ':', 1)
-    let name = join(name, ':')
-
-    if !has_key(s:useraction[a:mode], id) ||
-          \ !has_key(s:useraction[a:mode][id], name)
-      call s:message.echomsg_error('Unknown action name: ' .. a:action_name)
-      return
-    endif
-
-    return s:useraction[a:mode][id][name]
-  endif
+function! gram#mapping#_get_maptree_set() abort
+  return deepcopy(s:maptree_sets)
 endfunction
-
-
-" Built-in actions
-function! s:n_action_select_prev_item() abort
-  let line = s:window.line('.')
-  if line == 1
-    call s:window.set_cursor_line(s:window.line('$'))
-  else
-    call s:window.set_cursor_line(line - 1)
-  endif
-  call s:impl.on_cursor_moved()
-endfunction
-
-function! s:n_action_select_next_item() abort
-  let line = s:window.line('.')
-  if line == s:window.line('$')
-    call s:window.set_cursor_line(1)
-  else
-    call s:window.set_cursor_line(line + 1)
-  endif
-  call s:impl.on_cursor_moved()
-endfunction
-
-let &cpoptions = s:cpoptions_save
-unlet s:cpoptions_save

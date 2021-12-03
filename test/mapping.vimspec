@@ -1,95 +1,109 @@
-if !has('vimscript-3')
-  call g:assert.skip(execute('version') .
-        \ "\nThis vim does not have :scriptversion 3")
-  finish
-endif
+Describe gram/mapping.vim
+  Before all
+    call gram#mapping#add_mode('testmode')
+  End
 
-let s:mapping = themis#helper('scope').funcs('autoload/gram/mapping.vim')
-let s:getchar = themis#helper('scope').funcs('autoload/gram/getchar.vim')
-call themis#func_alias(s:mapping)
-call themis#func_alias(s:getchar)
+  Before each
+    call gram#mapping#_clear_entire_mapping()
+    call gram#mapping#_clear_input_queue()
+    call gram#mapping#add_mode('testmode')
+  End
 
-Describe gram/mapping
-  Describe s:_get_escaped_mapchar()
-    It doesn't escape a non-special key.
-      call g:assert.equal(s:mapping._get_escaped_mapchar('a'), 'a')
-    End
-
-    It doesn't escape an escaped special key.
-      call g:assert.equal(s:mapping._get_escaped_mapchar("\<C-w>"), "\<C-w>")
-    End
-
-    It escapes a special key.
-      call g:assert.equal(s:mapping._get_escaped_mapchar('<C-w>'), "\<C-w>")
+  Describe add_typed_key()
+    It adds given string to input_queue
+      call gram#mapping#add_typed_key('a')
+      Assert Equals(gram#mapping#_get_input_queue(), 'a')
+      call gram#mapping#add_typed_key('b')
+      Assert Equals(gram#mapping#_get_input_queue(), 'ab')
     End
   End
 
-  Describe s:_unify_mapchar()
-    It escapes every special keys in string - 1.
-      call g:assert.equal(
-            \ s:mapping._unify_mapchar('a<C-w>b<C-a>c'),
-            \ "a\<C-w>b\<C-a>c"
-            \ )
-    End
-
-    It escapes every special keys in string - 2.
-      call g:assert.equal(
-            \ s:mapping._unify_mapchar('a<C-w><C-a>c'),
-            \ "a\<C-w>\<C-a>c"
-            \ )
+  Describe switch_mode()
+    It sets the current mode
+      call gram#mapping#switch_mode('normal')
+      Assert Equals(gram#mapping#get_mode(), 'normal')
+      call gram#mapping#switch_mode('insert')
+      Assert Equals(gram#mapping#get_mode(), 'insert')
     End
   End
 
-  Describe s:_get_rhs()
-    Before all
-      call gram#module#import('mapping')  " Call __init__()
+  Describe add_mode()
+    After each
+      call gram#mapping#_clear_entire_mapping()
+    End
+    It adds mode
+      Assert Equals(gram#mapping#_get_maptree_sets(), {})
+      call gram#mapping#add_mode('testmode')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode': {}})
+    End
+  End
 
-      call s:mapping.map_key('n', 'a', 'aa')
-      call s:mapping.map_key('n', 'g', 'gg')
-      call s:mapping.map_key('n', 'ga', 'gga')
-      call s:mapping.map_key('n', 'gb', 'ggb')
+  Describe lookup_mapping()
+    Before each
+        call gram#mapping#switch_mode('testmode')
     End
 
-    After all
-      call s:mapping.unmap('n', 'a')
-      call s:mapping.unmap('n', 'g')
-      call s:mapping.unmap('n', 'ga')
-      call s:mapping.unmap('n', 'gb')
+    Context noremap only
+      It finds mapping 1
+        call gram#mapping#noremap('testmode', 'a', 'testmode-a')
+        call gram#mapping#add_typed_key('a')
+        Assert Equals(gram#mapping#lookup_mapping(), 'testmode-a')
+        Assert Equals(gram#mapping#_get_input_queue(), '')
+      End
+
+      It finds mapping 2
+        call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
+        call gram#mapping#add_typed_key('ab')
+        Assert Equals(gram#mapping#lookup_mapping(), 'testmode-ab')
+        Assert Equals(gram#mapping#_get_input_queue(), '')
+      End
+
+      It finds mapping 3
+        call gram#mapping#noremap('testmode', 'a', 'testmode-a')
+        call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
+        call gram#mapping#add_typed_key('ab')
+        Assert Equals(gram#mapping#lookup_mapping(), 'testmode-ab')
+        Assert Equals(gram#mapping#_get_input_queue(), '')
+      End
+
+      It finds mapping 4
+        call gram#mapping#noremap('testmode', 'a', 'testmode-a')
+        call gram#mapping#add_typed_key('abc')
+        Assert Equals(gram#mapping#lookup_mapping(), 'testmode-a')
+        Assert Equals(gram#mapping#_get_input_queue(), 'bc')
+      End
+
+      It finds the mapping not exist
+        call gram#mapping#noremap('testmode', 'a', 'testmode-a')
+        call gram#mapping#add_typed_key('b')
+        Assert Equals(gram#mapping#lookup_mapping(), 'b')
+        Assert Equals(gram#mapping#_get_input_queue(), '')
+      End
+
+      It waits for more key typed
+        call gram#mapping#noremap('testmode', 'a', 'testmode-a')
+        call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
+        call gram#mapping#add_typed_key('a')
+        Assert Equals(gram#mapping#lookup_mapping(), '')
+        Assert Equals(gram#mapping#_get_input_queue(), 'a')
+      End
     End
 
-    It returns {rhs} 1.
-      call g:assert.equals(
-            \ s:getchar._get_rhs('n', ['a']),
-            \ [{'key': ['aa'], 'kind': 'map'}, []]
-            \ )
-    End
+    Context noremap and map are mixtured
+      It finds mapping
+        call gram#mapping#map('testmode', 'a', 'testmode-map-a')
+        call gram#mapping#noremap('testmode', 'testmode-map-a', 'testmode-noremap-a')
+        call gram#mapping#add_typed_key('a')
+        Assert Equals(gram#mapping#lookup_mapping(), 'testmode-noremap-a')
+        Assert Equals(gram#mapping#_get_input_queue(), '')
+      End
 
-    It returns {rhs} 2.
-      call g:assert.equals(
-            \ s:getchar._get_rhs('n', ['a', 'a']),
-            \ [{'key': ['aa'], 'kind': 'map'}, ['a']]
-            \ )
-    End
-
-    It doesn't return any keys if {lhs} didn't find.
-      call g:assert.equals(
-            \ s:getchar._get_rhs('n', ['b']),
-            \ [{'key': ['b'], 'kind': 'noremap'}, []]
-            \ )
-    End
-
-    It returns {rhs} with its strchars({lhs}) >= 2.
-      call g:assert.equals(
-            \ s:getchar._get_rhs('n', ['g', 'a']),
-            \ [{'key': ['gga'], 'kind': 'map'}, []]
-            \ )
-    End
-
-    It doesn't return any keys if {lhs} isn't completed.
-      call g:assert.equals(
-            \ s:getchar._get_rhs('n', ['g']),
-            \ [{'key': [], 'kind': 'wait_more_keys'}, []]
-            \ )
+      It finds the remaped rhs not exist
+        call gram#mapping#map('testmode', 'a', 'testmode-map-a')
+        call gram#mapping#add_typed_key('a')
+        Assert Equals(gram#mapping#lookup_mapping(), 't')
+        Assert Equals(gram#mapping#_get_input_queue(), 'estmode-map-a')
+      End
     End
   End
 End

@@ -1,69 +1,15 @@
-if !has('vimscript-3')
-  call g:assert.skip(execute('version') .
-        \ "\nThis vim does not have :scriptversion 3")
-  finish
-endif
-
-Describe gram
-  Before all
-    let g:DoNothing = {-> 0}
-
-    call gram#select({
-          \ 'name': 'gram-test',
-          \ 'completefunc': g:DoNothing,
-          \ 'callback': g:DoNothing,
-          \ })
-
-    let s:getchar = gram#module#import('getchar')
-  End
-
-  Describe getchar
-    It is normal-mode first.
-      call g:assert.equals(s:getchar.get_mode(), 'n')
-      call gram#custom#map_action('n', 'i', 'start-insert')
-      call gram#custom#map_action('i', '<Esc>', 'stop-insert')
+Describe gram/getchar.vim
+  Describe gram#getchar#get_queue()
+    It returns [] when there're no keys in queue
+      Assert Equals(gram#getchar#get_queue(), [])
     End
 
-    It changes mode.
-      call g:assert.equals(s:getchar.get_mode(), 'n')
-      normal! i
-      call g:assert.equals(s:getchar.get_mode(), 'i')
-      execute "normal! \<ESC>"
-      call g:assert.equals(s:getchar.get_mode(), 'n')
+    It returns a queue composed of typed keys
+      call gram#getchar#setup()
+      call feedkeys('abc', 'tx!')
+      Assert Equals(gram#getchar#get_queue(), ['a', 'b', 'c'])
+      Assert Equals(gram#getchar#get_queue(), [])
+      call gram#getchar#quit()
     End
-  End
-
-  Describe insert-mode
-    Before all
-      call gram#custom#map_action('i', '@', ['move-to-tail', 'delete-to-head'])
-      call gram#custom#map_action('n', 'i', 'start-insert')
-      call gram#custom#map_action('i', '<Esc>', 'stop-insert')
-      let s:insertmode = gram#module#import('insertmode')
-    End
-
-    Before each
-      execute "normal! i@\<ESC>"
-    End
-
-    It gets a single input to filter items.
-      execute "normal! ia\<ESC>"
-      call g:assert.equals(s:insertmode.get_input_text(), 'a')
-    End
-
-    It gets inputs to filter items.
-      execute "normal! ia\<ESC>"
-      execute "normal! ia\<ESC>"
-      call g:assert.equals(s:insertmode.get_input_text(), 'aa')
-    End
-
-    After all
-      call gram#custom#unmap('n', '@')
-      call gram#custom#unmap('i', '<Esc>')
-      call gram#custom#unmap('i', 'i')
-    End
-  End
-
-  After all
-    call gram#module#import('window').background()
   End
 End
