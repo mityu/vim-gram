@@ -137,4 +137,59 @@ Describe gram/mapping.vim
       End
     End
   End
+
+  Describe unmap()
+    Before each
+      call gram#mapping#_clear_entire_mapping()
+      call gram#mapping#add_mode('testmode')
+      call gram#mapping#switch_mode('testmode')
+    End
+
+    After all
+      call gram#mapping#_clear_entire_mapping()
+    End
+
+    It removes mapping 1
+      call gram#mapping#noremap('testmode', 'abc', 'rhs-abc')
+      call gram#mapping#unmap('testmode', 'abc')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode': {}})
+    End
+
+    It removes mapping 2
+      call gram#mapping#noremap('testmode', 'abc', 'rhs-abc')
+      call gram#mapping#noremap('testmode', 'abd', 'rhs-abd')
+      call gram#mapping#unmap('testmode', 'abc')
+
+      call gram#mapping#add_typed_key('abc')
+      Assert Equals(gram#mapping#lookup_mapping(), 'abc')
+      Assert Equals(gram#mapping#_get_input_queue(), '')
+
+      call gram#mapping#_clear_input_queue()
+      call gram#mapping#add_typed_key('abd')
+      Assert Equals(gram#mapping#lookup_mapping(), 'rhs-abd')
+      Assert Equals(gram#mapping#_get_input_queue(), '')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
+            \ {'a': {'b': {'d': {'rhs': {'nomore': 1, 'mapto': 'rhs-abd'}}}}}
+            \ })
+    End
+
+    It removes mapping 3
+      call gram#mapping#noremap('testmode', 'abcefg', 'rhs-abcefg')
+      call gram#mapping#noremap('testmode', 'abd', 'rhs-abd')
+      call gram#mapping#unmap('testmode', 'abcefg')
+
+      call gram#mapping#add_typed_key('abcefg')
+      Assert Equals(gram#mapping#lookup_mapping(), 'abc')
+      Assert Equals(gram#mapping#_get_input_queue(), 'efg')
+
+      call gram#mapping#_clear_input_queue()
+      call gram#mapping#add_typed_key('abd')
+      Assert Equals(gram#mapping#lookup_mapping(), 'rhs-abd')
+      Assert Equals(gram#mapping#_get_input_queue(), '')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
+            \ {'a': {'b': {'d': {'rhs': {'nomore': 1, 'mapto': 'rhs-abd'}}}}}
+            \ })
+    End
+
+  End
 End

@@ -43,6 +43,10 @@ function! gram#mapping#map(mode, lhs, rhs) abort
   call s:map(0, a:mode, a:lhs, a:rhs)
 endfunction
 
+function! gram#mapping#unmap(mode, lhs) abort
+  call s:unmap(a:mode, a:lhs)
+endfunction
+
 function! gram#mapping#add_typed_key(s) abort
   let s:input_queue ..= a:s
 endfunction
@@ -50,7 +54,7 @@ endfunction
 function! gram#mapping#lookup_mapping() abort
   let r = s:lookup_mapping(s:current_mode, s:input_queue)
   if r.completed
-    let s:input_queue = r.rest
+    let s:input_queue = r.unprocessed
     return r.rhs
   endif
   return ''
@@ -79,11 +83,44 @@ function! s:map(nomore, mode, lhs, rhs) abort
         \}
 endfunction
 
+function! s:unmap(mode, lhs) abort
+  let lhs = split(s:unify_specialchar(a:lhs), '\zs')
+  let tree = s:maptree_sets[a:mode]
+  let tree_hist = []
+  for c in lhs
+    if !has_key(tree, c)
+      " TODO: Show error in another way (and return false?)
+      echo 'No mappings found for:' a:lhs
+      return
+    endif
+
+    call insert(tree_hist, {'tree': tree, 'key': c})
+    let tree = tree[c]
+  endfor
+
+  if !has_key(tree, 'rhs')
+      " TODO: Show error in another way (and return false?)
+      echo 'No mappings found for:' a:lhs
+      return
+  endif
+
+  call remove(tree, 'rhs')
+
+  " Cleanup tree; remove empty nodes
+  for h in tree_hist
+    if empty(h.tree[h.key])
+      call remove(h.tree, h.key)
+    else
+      break
+    endif
+  endfor
+endfunction
+
 " mode: string
 " input: string (TODO: list<string> is better?)
 function! s:lookup_mapping(mode, input) abort
   " TODO: Set safety for recursive mapping; loopCountMax variable
-  " TODO: Rename `rest` to `unprocessed`
+  " TODO: Rename `unprocessed` to `unprocessed`
   let input = s:unify_specialchar(a:input)
   let tree = s:maptree_sets[a:mode]
   let sequence = split(input, '\zs')
@@ -98,7 +135,7 @@ function! s:lookup_mapping(mode, input) abort
             return {
                   \'completed': 1,
                   \'rhs': tree.rhs.mapto,
-                  \'rest': join(sequence, ''),
+                  \'unprocessed': join(sequence, ''),
                   \}
         else
           let sequence = split(tree.rhs.mapto, '\zs') + sequence
@@ -112,7 +149,7 @@ function! s:lookup_mapping(mode, input) abort
           return {
                 \'completed': 1,
                 \'rhs': tree.rhs.mapto,
-                \'rest': join(sequence, ''),
+                \'unprocessed': join(sequence, ''),
                 \}
         endif
         let sequence = split(tree.rhs.mapto, '\zs') + sequence
@@ -122,7 +159,7 @@ function! s:lookup_mapping(mode, input) abort
         return {
               \'completed': 1,
               \'rhs': processed,
-              \'rest': join(sequence, ''),
+              \'unprocessed': join(sequence, ''),
               \}
       endif
     endif
@@ -130,7 +167,7 @@ function! s:lookup_mapping(mode, input) abort
   return {
         \'completed': 0,
         \'rhs': '',
-        \'rest': a:input,
+        \'unprocessed': a:input,
         \}
 endfunction
 
