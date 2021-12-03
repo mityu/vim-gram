@@ -98,10 +98,16 @@ Describe gram/mapping.vim
         Assert Equals(gram#mapping#_get_input_queue(), 'bc')
       End
 
-      It finds the mapping not exist
+      It finds the mapping not exist 1
         call gram#mapping#noremap('testmode', 'a', 'testmode-a')
         call gram#mapping#add_typed_key('b')
         Assert Equals(gram#mapping#lookup_mapping(), 'b')
+        Assert Equals(gram#mapping#_get_input_queue(), '')
+      End
+
+      It finds the mapping not exist 2
+        call gram#mapping#add_typed_key('a')
+        Assert Equals(gram#mapping#lookup_mapping(), 'a')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
