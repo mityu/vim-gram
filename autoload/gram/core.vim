@@ -88,6 +88,22 @@ function! gram#core#clear_matched_items(source_name) abort
   let s:matched_items[a:source_name] = []
 endfunction
 
+function! gram#core#on_key_typed(c) abort
+  call gram#mapping#add_typed_key(a:c)
+  while 1
+    let mapto = gram#mapping#lookup_mapping()
+    if mapto ==# ''
+      " No mappings found
+      break
+    endif
+    " TODO: Evaluate mapto
+  endwhile
+endfunction
+
+function! gram#core#on_mapping_timeout(c) abort
+  " TODO: Process a:c (string, typed keys)
+endfunction
+
 
 function! gram#core#get_active_sources() abort
   return deepcopy(s:source_priority)

@@ -1,7 +1,6 @@
 scriptversion 4
 
 let s:popupID = 0
-let s:queue = []
 
 function! gram#getchar#setup() abort
   let s:popupID = popup_create('', {
@@ -19,15 +18,8 @@ function! gram#getchar#quit() abort
   endif
 endfunction
 
-function! gram#getchar#get_queue() abort
-  if empty(s:queue)
-    return []
-  endif
-  return remove(s:queue, 0, -1)
-endfunction
-
 function! s:filter(winid, key) abort
-  call add(s:queue, a:key)
+  call gram#core#on_key_typed(a:key)
   return 1  " No more evaluation
 endfunction
 
