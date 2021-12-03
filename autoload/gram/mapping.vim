@@ -12,33 +12,8 @@ let s:maptree_sets = {}  " {mode: s:maptree}
 " In 'rhs' key value, we hold mapping's right-hand-side infomation:
 "   - nomore (boolean) ... If this is TRUE, we have no need to search more.
 "   - mapto  (string)  ... What is mapped to
-" If this component is empty, it means nothing is mapped.
+" If tree doesn't have this component, it means nothing is mapped.
 "
-" In 'submap' key value, the s:maptree structure appears again. Like this,
-" the structure of s:maptree appears in itself recursively.
-"
-" Example)
-"  call gram#mapping#nnoremap('i', 'ab', 'rhs-of-a')
-"  => s:maptree_sets['i'] will be:
-"  {
-"     'rhs': {},
-"     'submap': {
-"       'a': {
-"         'rhs': {},
-"         'submap': {
-"           'b': {
-"             'rhs': {
-"               'nomore': 1,
-"               'mapto': 'rhs-of-a',
-"             },
-"             'submap': {}
-"           }
-"         }
-"       }
-"     }
-"  }
-" TODO: There's no need to separate 'rhs' because keys except for 'rhs' is
-" must just one character. So we can hold mapping like this:
 " {
 "   'a': {
 "     'b': {
@@ -55,7 +30,7 @@ let s:maptree_sets = {}  " {mode: s:maptree}
 
 function! gram#mapping#add_mode(mode) abort
   if !has_key(s:maptree_sets, a:mode)
-    let s:maptree_sets[a:mode] = deepcopy(s:maptree)
+    let s:maptree_sets[a:mode] = {}
   endif
 endfunction
 
@@ -93,10 +68,10 @@ function! s:map(nomore, mode, lhs, rhs) abort
   let lhs = s:unify_specialchar(a:lhs)
   let tree = s:maptree_sets[a:mode]
   for c in split(lhs, '\zs')
-    if !has_key(tree.submap, c)
-      let tree.submap[c] = deepcopy(s:maptree)
+    if !has_key(tree, c)
+      let tree[c] = {}
     endif
-    let tree = tree.submap[c]
+    let tree = tree[c]
   endfor
   let tree.rhs = {
         \'nomore': a:nomore,
@@ -116,14 +91,8 @@ function! s:lookup_mapping(mode, input) abort
   while !empty(sequence)
     let c = remove(sequence, 0)
     let processed ..= c
-    if !has_key(tree.submap, c)
-      if empty(tree.rhs)
-        return {
-              \'completed': 1,
-              \'rhs': processed,
-              \'rest': join(sequence, ''),
-              \}
-      else
+    if !has_key(tree, c)
+      if has_key(tree, 'rhs')
         if tree.rhs.nomore
           return {
                 \'completed': 1,
@@ -134,11 +103,17 @@ function! s:lookup_mapping(mode, input) abort
         let sequence = split(tree.rhs.mapto, '\zs') + sequence
         let processed = ''
         let tree = s:maptree_sets[a:mode]
+      else
+        return {
+              \'completed': 1,
+              \'rhs': processed,
+              \'rest': join(sequence, ''),
+              \}
       endif
     else
-      let tree = tree.submap[c]
-      if empty(tree.submap)
-        if tree.rhs.nomore
+      let tree = tree[c]
+      if empty(tree) || keys(tree) == ['rhs']
+        if has_key(tree, 'rhs') && tree.rhs.nomore
             return {
                   \'completed': 1,
                   \'rhs': tree.rhs.mapto,
@@ -185,6 +160,6 @@ function! gram#mapping#_clear_entire_mapping() abort
   let s:maptree_sets = {}
 endfunction
 
-function! gram#mapping#_get_maptree_set() abort
+function! gram#mapping#_get_maptree_sets() abort
   return deepcopy(s:maptree_sets)
 endfunction

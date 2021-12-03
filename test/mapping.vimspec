@@ -32,9 +32,34 @@ Describe gram/mapping.vim
       call gram#mapping#_clear_entire_mapping()
     End
     It adds mode
+      call gram#mapping#_clear_entire_mapping()
       Assert Equals(gram#mapping#_get_maptree_sets(), {})
       call gram#mapping#add_mode('testmode')
       Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode': {}})
+    End
+  End
+
+  Describe noremap()
+    Before each
+      call gram#mapping#_clear_entire_mapping()
+      call gram#mapping#add_mode('testmode')
+      call gram#mapping#switch_mode('testmode')
+    End
+
+    After all
+      call gram#mapping#_clear_entire_mapping()
+    End
+
+    It adds mapping (depth = 1)
+      call gram#mapping#noremap('testmode', 'a', 'testmode-a')
+      Assert Equals(gram#mapping#_get_maptree_sets(),
+            \{'testmode': {'a': {'rhs': {'nomore': 1, 'mapto': 'testmode-a'}}}})
+    End
+
+    It adds mapping (depth = 1)
+      call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
+      Assert Equals(gram#mapping#_get_maptree_sets(),
+            \{'testmode': {'a': {'b': {'rhs': {'nomore': 1, 'mapto': 'testmode-ab'}}}}})
     End
   End
 
