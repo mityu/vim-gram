@@ -232,6 +232,14 @@ Describe gram/mapping.vim
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
+      It cooperates with count in rhs by noremap and extra suffix
+        call gram#mapping#noremap('testmode', 'a', '2mapped-a')
+        call gram#mapping#add_typed_key('1abc')
+        Assert Equals(gram#mapping#lookup_mapping(),
+              \ {'resolved': 'mapped-a', 'count': 12, 'count1': 12})
+        Assert Equals(gram#mapping#_get_input_queue(), 'bc')
+      End
+
       It cooperates with count in rhs by map
         call gram#mapping#map('testmode', 'a', '2mapped-a')
         call gram#mapping#add_typed_key('1a')

@@ -297,7 +297,7 @@ function! s:lookup_mapping(mode, input, timeouted) abort
     if has_key(tree, 'rhs')
       let mapto = tree.rhs.mapto
     else
-      let mapto = processed
+      let mapto = processed  " TODO: fix this
     endif
 
     if opt.handle_count
@@ -326,6 +326,128 @@ function! s:lookup_mapping(mode, input, timeouted) abort
         \}
 endfunction
 
+function! s:lookup_mapping(mode, input, timeouted) abort
+  " TODO: Count the times of lookup remap and if the count is too large,
+  " escape this function.
+  let ctx = {
+        \'mode': a:mode,
+        \'unprocessed': a:input,
+        \'timeouted': a:timeouted,
+        \'count': '',
+        \'opt': gram#mapping#get_mode_options(a:mode),
+        \}
+  while 1
+    let r = s:lookup_mapping_once(ctx)
+    if !(r.rhs ==# '' && r.completed)
+      break
+    endif
+    let ctx.unprocessed = r.unprocessed
+    let ctx.count = r.count
+  endwhile
+  let count = str2nr(r.count)
+  return {
+        \'completed': r.completed,
+        \'count': count,
+        \'count1': count ? count : 1,
+        \'rhs': r.rhs,
+        \'unprocessed': r.unprocessed,
+        \}
+endfunction
+
+function! s:lookup_mapping_once(ctx) abort
+  let r = {
+        \'completed': 1,
+        \'count': a:ctx.count,
+        \'rhs': '',
+        \'unprocessed': '',
+        \}
+  let sequence = split(a:ctx.unprocessed, '\zs')
+  let tree = s:maptree_sets[a:ctx.mode]
+  let use_found_rhs = 0
+  let throw_one_and_retry = 0
+  let lookup_remap = 0
+  while !empty(sequence)
+    let c = remove(sequence, 0)
+    if has_key(tree, c)
+      let tree = tree[c]
+      if !(len(tree) == 1 && has_key(tree, 'rhs'))
+        " It is still a part of mapping yet. Continue looking up mapping.
+        " E.g.) When 'abc' is mapped and now we have processed only 'a' or 'ab'.
+        continue
+      endif
+
+      " When only this mapping is defined:
+      "   map ab mapped-ab
+      " and typed keys are 'ab', we reach here. In this case, we should apply
+      " the mapping of 'ab', and set unprocessed key properly. Note that these
+      " work is done at the bottom of this function.
+      let r.unprocessed = join(sequence, '')
+      if tree.rhs.nomore
+        let use_found_rhs = 1
+      else
+        let lookup_remap = 1
+      endif
+    else
+      if has_key(tree, 'rhs')
+        " When only these mappings are defined:
+        "   map ab mapped-ab
+        "   map abc mapped-abc
+        " and typed keys are 'abd', we reach here. In this case, we should
+        " apply the mapping of 'ab' with 'd' remaining unprocessed.
+        " Note that these work (such as make 'd' remained) is done at the
+        " bottom of this function.
+        if tree.rhs.nomore
+          let use_found_rhs = 1
+        else
+          let lookup_remap = 1
+        endif
+      else
+        " No mappings found. We should throw away the first key of input and
+        " try to lookup mappings again. This is for cases like this:
+        "   Only this mapping is set:
+        "     map ab maped-ab
+        "   and we got 'wab' typed.
+        "   In this case, we should return "No mappings found for 'w'" first,
+        "   and then "A mapping for 'ab' found, it's mapped to 'mapset-ab'".
+        " This also make it be able to handle [count].
+        let throw_one_and_retry = 1
+      endif
+    endif
+    break
+  endwhile
+
+  let rhs_available = has_key(tree, 'rhs')
+  if lookup_remap
+    let r.unprocessed = tree.rhs.mapto .. join(sequence, '')
+  elseif use_found_rhs || (a:ctx.timeouted && rhs_available)
+    if a:ctx.opt.handle_count
+      " The rhs may contain [count]. E.g. :map @ 2<Plug>(great-action)
+      let [count, r.rhs] =
+            \ s:separate_count_and_map(tree.rhs.mapto)
+      let r.count ..= count
+    else
+      let r.rhs = tree.rhs.mapto
+    endif
+  elseif throw_one_and_retry || a:ctx.timeouted
+    " If the key, thrown away, is a digit, it may should be treated as a part
+    " of [count] specification.
+    if a:ctx.opt.handle_count
+      if s:is_digit(a:ctx.unprocessed[0])
+        let r.count ..= a:ctx.unprocessed[0]
+      else
+        let r.rhs = a:ctx.unprocessed[0]
+      endif
+    else
+      let r.rhs = a:ctx.unprocessed[0]
+    endif
+    let r.unprocessed = a:ctx.unprocessed[1 :]
+  else
+    let r.completed = 0
+    let r.unprocessed = a:ctx.unprocessed
+  endif
+  return r
+endfunction
+
 function! s:unify_specialchar(map) abort
   return substitute(a:map, '<.\{-}>',
         \ '\=s:escape_specialchar(submatch(0))', 'g')
@@ -341,6 +463,11 @@ function! s:to_digit(c) abort
     return d
   endif
   return -1
+endfunction
+
+function! s:is_digit(c) abort
+  let d = char2nr(a:c) - 48  " char2nr('0') == 48
+  return 0 <= d && d <= 9
 endfunction
 function! s:separate_count_and_map(s) abort
   return matchlist(a:s, '^\v(\d+)?(.*)$')[1 : 2]
