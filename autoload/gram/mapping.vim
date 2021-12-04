@@ -93,7 +93,14 @@ function! s:timeoutlen_timer_callback(_) abort
   let s:input_queue = ''
   let t = type(s:Callback_on_timeout)
   if t == v:t_string || t == v:t_func
-    call call(s:Callback_on_timeout, [input])
+    while true
+      let r = s:lookup_mapping(s:current_mode, input, 1)
+      call call(s:Callback_on_timeout, [r.rhs])
+      if r.unprocessed == ''
+        break
+      endif
+      let input = r.unprocessed
+    endwhile
   endif
 endfunction
 
