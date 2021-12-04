@@ -118,6 +118,19 @@ Describe gram/mapping.vim
         Assert Equals(gram#mapping#lookup_mapping().resolved, '')
         Assert Equals(gram#mapping#_get_input_queue(), 'a')
       End
+
+      It finds mapping with invalid prefix in input
+        call gram#mapping#noremap('testmode', 'abc', 'testmode-abc')
+        call gram#mapping#noremap('testmode', 'wan', 'testmode-wan')
+        call gram#mapping#add_typed_key('wabc')
+        Assert Equals(gram#mapping#lookup_mapping().resolved, 'w')
+        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-abc')
+
+        call gram#mapping#add_typed_key('wwabc')
+        Assert Equals(gram#mapping#lookup_mapping().resolved, 'w')
+        Assert Equals(gram#mapping#lookup_mapping().resolved, 'w')
+        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-abc')
+      End
     End
 
     Context noremap and map are mixtured
@@ -226,6 +239,21 @@ Describe gram/mapping.vim
               \ {'resolved': 'm', 'count': 12, 'count1': 12})
         Assert Equals(gram#mapping#_get_input_queue(), 'apped-a')
       End
+
+      It can find mapping when it's consisted only by digits
+        call gram#mapping#noremap('testmode', '23', 'mapped-23')
+        call gram#mapping#add_typed_key('23')
+        Assert Equals(gram#mapping#lookup_mapping(),
+              \ {'resolved': 'mapped-23', 'count': 0, 'count1': 1})
+
+      End
+
+      It tells count and mapping apart
+        call gram#mapping#noremap('testmode', '23', 'mapped-23')
+        call gram#mapping#add_typed_key('223')
+        Assert Equals(gram#mapping#lookup_mapping(),
+              \ {'resolved': 'mapped-23', 'count': 2, 'count1': 2})
+      End
     End
   End
 
@@ -252,8 +280,8 @@ Describe gram/mapping.vim
       call gram#mapping#unmap('testmode', 'abc')
 
       call gram#mapping#add_typed_key('abc')
-      Assert Equals(gram#mapping#lookup_mapping().resolved, 'abc')
-      Assert Equals(gram#mapping#_get_input_queue(), '')
+      Assert Equals(gram#mapping#lookup_mapping().resolved, 'a')
+      Assert Equals(gram#mapping#_get_input_queue(), 'bc')
 
       call gram#mapping#_clear_input_queue()
       call gram#mapping#add_typed_key('abd')
@@ -270,8 +298,8 @@ Describe gram/mapping.vim
       call gram#mapping#unmap('testmode', 'abcefg')
 
       call gram#mapping#add_typed_key('abcefg')
-      Assert Equals(gram#mapping#lookup_mapping().resolved, 'abc')
-      Assert Equals(gram#mapping#_get_input_queue(), 'efg')
+      Assert Equals(gram#mapping#lookup_mapping().resolved, 'a')
+      Assert Equals(gram#mapping#_get_input_queue(), 'bcefg')
 
       call gram#mapping#_clear_input_queue()
       call gram#mapping#add_typed_key('abd')

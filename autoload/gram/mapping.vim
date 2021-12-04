@@ -213,10 +213,12 @@ function! s:lookup_mapping(mode, input, timeouted) abort
           if opt.handle_count
             let [mapto_count, mapto] =
                   \ s:separate_count_and_map(tree.rhs.mapto)
-            for _ in range(strlen(mapto_count))
-              let count = count * 10
-            endfor
-            let count += str2nr(mapto_count)
+            if mapto_count !=# ''
+              for _ in range(strlen(mapto_count))
+                let count = count * 10
+              endfor
+              let count += str2nr(mapto_count)
+            endif
           else
             let mapto = tree.rhs.mapto
           endif
@@ -229,6 +231,7 @@ function! s:lookup_mapping(mode, input, timeouted) abort
                 \'count1': count ? count : 1,
                 \}
         else
+          " Mapping is defined by map(). Try looking for mapping again.
           let sequence = split(tree.rhs.mapto, '\zs') + sequence
           let processed = ''
           let tree = s:maptree_sets[a:mode]
@@ -269,22 +272,20 @@ function! s:lookup_mapping(mode, input, timeouted) abort
         let tree = s:maptree_sets[a:mode]
       else
         if opt.handle_count
-          " If c is an digit, treat it as a count.
-          let d = s:to_digit(c)
+          let d = s:to_digit(processed[0])
           if d != -1
-            let processed = processed[: -2]
-            if processed ==# ''
-              let count = count * 10 + d
-              continue
-            endif
-            call insert(sequence, c)
+            let count = count * 10 + d
+            let sequence = split(processed[1 :], '\zs') + sequence
+            let processed = ''
+            let tree = s:maptree_sets[a:mode]
+            continue
           endif
         endif
 
         return {
               \'completed': 1,
-              \'rhs': processed,
-              \'unprocessed': join(sequence, ''),
+              \'rhs': processed[0],
+              \'unprocessed': processed[1 :] .. join(sequence, ''),
               \'count': count,
               \'count1': count ? count : 1,
               \}
