@@ -56,7 +56,7 @@ Describe gram/mapping.vim
             \{'testmode': {'a': {'rhs': {'nomore': 1, 'mapto': 'testmode-a'}}}})
     End
 
-    It adds mapping (depth = 1)
+    It adds mapping (depth = 2)
       call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
       Assert Equals(gram#mapping#_get_maptree_sets(),
             \{'testmode': {'a': {'b': {'rhs': {'nomore': 1, 'mapto': 'testmode-ab'}}}}})
@@ -191,5 +191,55 @@ Describe gram/mapping.vim
             \ })
     End
 
+  End
+
+  Describe timeoutlen
+    Before all
+      let g:backed = ''
+      function TimeoutlenCallback(s)
+        let g:backed = a:s
+      endfunction
+      call gram#mapping#set_callback_on_timeout('TimeoutlenCallback')
+    End
+
+    After all
+      unlet g:backed
+      delfunc TimeoutlenCallback
+    End
+
+    Before each
+      call gram#mapping#set_timeoutlen(1)
+      call gram#mapping#_clear_input_queue()
+    End
+
+    After each
+      call gram#mapping#stop_timeoutlen_timer()
+      let g:backed = ''
+    End
+
+    It notifies timeout
+      call gram#mapping#add_typed_key('abc')
+      call gram#mapping#start_timeoutlen_timer()
+      sleep 30m
+      Assert Equals(g:backed, 'abc')
+      Assert Equals(gram#mapping#_get_input_queue(), '')
+    End
+
+    It quits working if stop_timeoutlen_timer() is called
+      call gram#mapping#set_timeoutlen(10)
+      call gram#mapping#add_typed_key('abc')
+      call gram#mapping#start_timeoutlen_timer()
+      call gram#mapping#stop_timeoutlen_timer()
+      sleep 30m
+      Assert Equals(g:backed, '')
+      Assert Equals(gram#mapping#_get_input_queue(), 'abc')
+    End
+
+    It does not call callback when the input queue is empty
+      let g:backed = 'initial'
+      call gram#mapping#start_timeoutlen_timer()
+      sleep 30m
+      Assert Equals(g:backed, 'initial')
+    End
   End
 End

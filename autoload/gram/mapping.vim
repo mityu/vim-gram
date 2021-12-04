@@ -8,6 +8,12 @@ let s:maptree = {
       \}
 let s:maptree_sets = {}  " {mode: s:maptree}
 
+" If user typed a key (this event should be notified via API by others such
+" as gram/core.vim), (re)start a timer for timeoutlen.
+let s:opt_timeoutlen = &timeoutlen
+let s:timeoutlen_timer_id = 0
+let s:Callback_on_timeout = v:null
+
 " How to hold mappings:
 " In 'rhs' key value, we hold mapping's right-hand-side infomation:
 "   - nomore (boolean) ... If this is TRUE, we have no need to search more.
@@ -64,10 +70,47 @@ function! gram#mapping#switch_mode(mode) abort
   let s:current_mode = a:mode
 endfunction
 
+function! gram#mapping#start_timeoutlen_timer() abort
+  call gram#mapping#stop_timeoutlen_timer()
+  let s:timeoutlen_timer_id = timer_start(s:opt_timeoutlen, funcref('s:timeoutlen_timer_callback'))
+endfunction
+
+function! gram#mapping#stop_timeoutlen_timer() abort
+  if s:timeoutlen_timer_id != 0
+    call timer_stop(s:timeoutlen_timer_id)
+    let s:timeoutlen_timer_id = 0
+  endif
+endfunction
+
+function! s:timeoutlen_timer_callback(_) abort
+  let s:timeoutlen_timer_id = 0
+  if s:input_queue ==# ''  " Do not call callback when the queue is empty
+    return
+  endif
+
+  let input = s:input_queue
+  let s:input_queue = ''
+  let t = type(s:Callback_on_timeout)
+  if t == v:t_string || t == v:t_func
+    call call(s:Callback_on_timeout, [input])
+  endif
+endfunction
+
+function! gram#mapping#set_callback_on_timeout(fn) abort
+  let s:Callback_on_timeout = a:fn
+endfunction
+
 function! gram#mapping#get_mode() abort
   return s:current_mode
 endfunction
 
+function! gram#mapping#set_timeoutlen(timeoutlen) abort
+  let s:opt_timeoutlen = a:timeoutlen
+endfunction
+
+function! gram#mapping#get_timeoutlen() abort
+  return s:opt_timeoutlen
+endfunction
 function! s:map(nomore, mode, lhs, rhs) abort
   let lhs = s:unify_specialchar(a:lhs)
   let tree = s:maptree_sets[a:mode]
@@ -116,11 +159,9 @@ function! s:unmap(mode, lhs) abort
   endfor
 endfunction
 
-" mode: string
-" input: string (TODO: list<string> is better?)
 function! s:lookup_mapping(mode, input) abort
   " TODO: Set safety for recursive mapping; loopCountMax variable
-  " TODO: Rename `unprocessed` to `unprocessed`
+  " TODO: If mapping not found but c is an digit, it may be [count]
   let input = s:unify_specialchar(a:input)
   let tree = s:maptree_sets[a:mode]
   let sequence = split(input, '\zs')
@@ -200,3 +241,4 @@ endfunction
 function! gram#mapping#_get_maptree_sets() abort
   return deepcopy(s:maptree_sets)
 endfunction
+
