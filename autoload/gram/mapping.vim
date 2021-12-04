@@ -58,7 +58,7 @@ function! gram#mapping#add_typed_key(s) abort
 endfunction
 
 function! gram#mapping#lookup_mapping() abort
-  let r = s:lookup_mapping(s:current_mode, s:input_queue)
+  let r = s:lookup_mapping(s:current_mode, s:input_queue, 0)
   if r.completed
     let s:input_queue = r.unprocessed
     return r.rhs
@@ -159,13 +159,14 @@ function! s:unmap(mode, lhs) abort
   endfor
 endfunction
 
-function! s:lookup_mapping(mode, input) abort
+function! s:lookup_mapping(mode, input, timeout) abort
   " TODO: Set safety for recursive mapping; loopCountMax variable
   " TODO: If mapping not found but c is an digit, it may be [count]
   let input = s:unify_specialchar(a:input)
   let tree = s:maptree_sets[a:mode]
   let sequence = split(input, '\zs')
   let processed = ''
+  let count = 0
   while !empty(sequence)
     let c = remove(sequence, 0)
     let processed ..= c
@@ -177,6 +178,8 @@ function! s:lookup_mapping(mode, input) abort
                   \'completed': 1,
                   \'rhs': tree.rhs.mapto,
                   \'unprocessed': join(sequence, ''),
+                  \'count': count,
+                  \'count1': count ? count : 1,
                   \}
         else
           let sequence = split(tree.rhs.mapto, '\zs') + sequence
@@ -185,30 +188,66 @@ function! s:lookup_mapping(mode, input) abort
         endif
       endif
     else
+      " When the context is:
+      "   (nore)map ab mapped-ab
+      "   noremap abc mapped-abc
+      "   noremap abd
+      "       => No mapping found
+      " If typed keys are 'abd', program reach here. In this case, we should
+      " return 'mapped-ab' if it's defined by noremap, or modify input_queue
+      " then try lookup mapping again.
       if has_key(tree, 'rhs')
         if tree.rhs.nomore
           return {
                 \'completed': 1,
                 \'rhs': tree.rhs.mapto,
                 \'unprocessed': join(sequence, ''),
+                \'count': count,
+                \'count1': count ? count : 1,
                 \}
         endif
         let sequence = split(tree.rhs.mapto, '\zs') + sequence
         let processed = ''
         let tree = s:maptree_sets[a:mode]
       else
+        " If c is an digit, treat it as a count.
+        let d = s:to_digit(c)
+        if d != -1
+          if processed ==# c
+            let count = count * 10 + d
+            continue
+          endif
+          let processed = processed[: -2]
+          call insert(sequence, c)
+        endif
+
         return {
               \'completed': 1,
               \'rhs': processed,
               \'unprocessed': join(sequence, ''),
+              \'count': count,
+              \'count1': count ? count : 1,
               \}
       endif
     endif
   endwhile
+
+  if a:timeout && has_key(tree, 'rhs')
+    return {
+          \'completed': 1,
+          \'rhs': processed,
+          \'unprocessed': '',
+          \'count': count,
+          \'count1': count ? count : 1,
+          \}
+  endif
+
   return {
         \'completed': 0,
         \'rhs': '',
         \'unprocessed': a:input,
+        \'count': 0,
+        \'count1': 1,
         \}
 endfunction
 
@@ -221,6 +260,13 @@ function! s:escape_specialchar(c) abort
   return eval(printf('"%s"', '\' .. a:c))
 endfunction
 
+function! s:to_digit(c) abort
+  let d = char2nr(a:c) - 48
+  if 0 <= d && d <= 9
+    return d
+  endif
+  return -1
+endfunction
 function! gram#mapping#_get_input_queue() abort
   return s:input_queue
 endfunction
