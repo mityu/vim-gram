@@ -3,6 +3,10 @@ scriptversion 4
 
 let s:input_queue = ''
 let s:current_mode = ''
+let s:modeopt_default = {
+      \'handle_count': 1,
+      \}
+let s:modeopts = {}
 let s:maptree = {
       \'rhs': {},
       \'submap': {},
@@ -38,7 +42,23 @@ let s:Callback_on_timeout = v:null
 function! gram#mapping#add_mode(mode) abort
   if !has_key(s:maptree_sets, a:mode)
     let s:maptree_sets[a:mode] = {}
+    let s:modeopts[a:mode] = copy(s:modeopt_default)
   endif
+endfunction
+
+function! gram#mapping#set_mode_options(mode, opt)
+  let opt = s:modeopts[a:mode]
+  for [k, v] in items(a:opt)
+    if !has_key(opt, k)
+      " TODO: Show error: Invalid option name
+      continue
+    endif
+    let opt[k] = v
+  endfor
+endfunction
+
+function! gram#mapping#get_mode_options(mode)
+  return copy(s:modeopts[a:mode])
 endfunction
 
 " rhs must be a string (action-name for :noremap or new lhs for :map)
@@ -62,9 +82,9 @@ function! gram#mapping#lookup_mapping() abort
   let r = s:lookup_mapping(s:current_mode, s:input_queue, 0)
   if r.completed
     let s:input_queue = r.unprocessed
-    return r.rhs
+    return {'resolved': r.rhs, 'count': r.count, 'count1': r.count1}
   endif
-  return ''
+  return {'resolved': '', 'count': 0, 'count1': 1}
 endfunction
 
 function! gram#mapping#switch_mode(mode) abort
@@ -93,9 +113,10 @@ function! s:timeoutlen_timer_callback(_) abort
   let s:input_queue = ''
   let t = type(s:Callback_on_timeout)
   if t == v:t_string || t == v:t_func
-    while true
+    while 1
       let r = s:lookup_mapping(s:current_mode, input, 1)
-      call call(s:Callback_on_timeout, [r.rhs])
+      call call(s:Callback_on_timeout,
+            \ [{'resolved': r.rhs, 'count': r.count, 'count1': r.count1}])
       if r.unprocessed == ''
         break
       endif
@@ -167,12 +188,15 @@ function! s:unmap(mode, lhs) abort
   endfor
 endfunction
 
-function! s:lookup_mapping(mode, input, timeout) abort
+function! s:lookup_mapping(mode, input, timeouted) abort
   " TODO: Set safety for recursive mapping; loopCountMax variable
+  " TODO: Better name for variable 'processed'. It's not really processed
+  " characters. It does not have chars for [count] neither parent map name.
   let input = s:unify_specialchar(a:input)
   let tree = s:maptree_sets[a:mode]
   let sequence = split(input, '\zs')
   let processed = ''
+  let opt = gram#mapping#get_mode_options(a:mode)
   let count = 0
   while !empty(sequence)
     let c = remove(sequence, 0)
@@ -186,13 +210,24 @@ function! s:lookup_mapping(mode, input, timeout) abort
       let tree = tree[c]
       if keys(tree) == ['rhs']
         if tree.rhs.nomore
-            return {
-                  \'completed': 1,
-                  \'rhs': tree.rhs.mapto,
-                  \'unprocessed': join(sequence, ''),
-                  \'count': count,
-                  \'count1': count ? count : 1,
-                  \}
+          if opt.handle_count
+            let [mapto_count, mapto] =
+                  \ s:separate_count_and_map(tree.rhs.mapto)
+            for _ in range(strlen(mapto_count))
+              let count = count * 10
+            endfor
+            let count += str2nr(mapto_count)
+          else
+            let mapto = tree.rhs.mapto
+          endif
+
+          return {
+                \'completed': 1,
+                \'rhs': mapto,
+                \'unprocessed': join(sequence, ''),
+                \'count': count,
+                \'count1': count ? count : 1,
+                \}
         else
           let sequence = split(tree.rhs.mapto, '\zs') + sequence
           let processed = ''
@@ -210,9 +245,20 @@ function! s:lookup_mapping(mode, input, timeout) abort
       " then try lookup mapping again if it's defined by map.
       if has_key(tree, 'rhs')
         if tree.rhs.nomore
+          if opt.handle_count
+            let [mapto_count, mapto] =
+                  \ s:separate_count_and_map(tree.rhs.mapto)
+            for _ in range(strlen(mapto_count))
+              let count = count * 10
+            endfor
+            let count += str2nr(mapto_count)
+          else
+            let mapto = tree.rhs.mapto
+          endif
+
           return {
                 \'completed': 1,
-                \'rhs': tree.rhs.mapto,
+                \'rhs': mapto,
                 \'unprocessed': join(sequence, ''),
                 \'count': count,
                 \'count1': count ? count : 1,
@@ -222,15 +268,17 @@ function! s:lookup_mapping(mode, input, timeout) abort
         let processed = ''
         let tree = s:maptree_sets[a:mode]
       else
-        " If c is an digit, treat it as a count.
-        let d = s:to_digit(c)
-        if d != -1
-          if processed ==# c
-            let count = count * 10 + d
-            continue
+        if opt.handle_count
+          " If c is an digit, treat it as a count.
+          let d = s:to_digit(c)
+          if d != -1
+            let processed = processed[: -2]
+            if processed ==# ''
+              let count = count * 10 + d
+              continue
+            endif
+            call insert(sequence, c)
           endif
-          let processed = processed[: -2]
-          call insert(sequence, c)
         endif
 
         return {
@@ -244,14 +292,28 @@ function! s:lookup_mapping(mode, input, timeout) abort
     endif
   endwhile
 
-  if a:timeout && has_key(tree, 'rhs')
+  if a:timeouted
+    if has_key(tree, 'rhs')
+      let mapto = tree.rhs.mapto
+    else
+      let mapto = processed
+    endif
+
+    if opt.handle_count
+      let [mapto_count, mapto] = s:separate_count_and_map(mapto)
+      for _ in range(strlen(mapto_count))
+        let count = count * 10
+      endfor
+      let count += str2nr(mapto_count)
+    endif
+
     return {
-          \'completed': 1,
-          \'rhs': processed,
-          \'unprocessed': '',
-          \'count': count,
-          \'count1': count ? count : 1,
-          \}
+            \'completed': 1,
+            \'rhs': mapto,
+            \'unprocessed': '',
+            \'count': count,
+            \'count1': count ? count : 1,
+            \}
   endif
 
   return {
@@ -279,6 +341,9 @@ function! s:to_digit(c) abort
   endif
   return -1
 endfunction
+function! s:separate_count_and_map(s) abort
+  return matchlist(a:s, '^\v(\d+)?(.*)$')[1 : 2]
+endfunction
 function! gram#mapping#_get_input_queue() abort
   return s:input_queue
 endfunction
@@ -300,3 +365,6 @@ function! gram#mapping#_get_maptree_sets() abort
   return deepcopy(s:maptree_sets)
 endfunction
 
+function! gram#mapping#_get_default_mode_options() abort
+  return copy(s:modeopt_default)
+endfunction
