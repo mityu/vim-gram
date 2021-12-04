@@ -1,4 +1,5 @@
 scriptversion 4
+" TODO: 'timeoutlen' feature should be provided as an separate program?
 
 let s:input_queue = ''
 let s:current_mode = ''
@@ -161,7 +162,6 @@ endfunction
 
 function! s:lookup_mapping(mode, input, timeout) abort
   " TODO: Set safety for recursive mapping; loopCountMax variable
-  " TODO: If mapping not found but c is an digit, it may be [count]
   let input = s:unify_specialchar(a:input)
   let tree = s:maptree_sets[a:mode]
   let sequence = split(input, '\zs')
@@ -171,6 +171,11 @@ function! s:lookup_mapping(mode, input, timeout) abort
     let c = remove(sequence, 0)
     let processed ..= c
     if has_key(tree, c)
+      " Suppose only this mapping is defined:
+      "   (nore)map ab mapped-ab
+      " When typed keys are 'ab', program reach here. In this case, we should
+      " return 'mapped-ab' if it's defined by noremap, or modify input_queue
+      " then try lookup mapping again if it's defined by map.
       let tree = tree[c]
       if keys(tree) == ['rhs']
         if tree.rhs.nomore
@@ -188,14 +193,14 @@ function! s:lookup_mapping(mode, input, timeout) abort
         endif
       endif
     else
-      " When the context is:
+      " Suppose only these mappings are defined:
       "   (nore)map ab mapped-ab
       "   noremap abc mapped-abc
       "   noremap abd
       "       => No mapping found
-      " If typed keys are 'abd', program reach here. In this case, we should
+      " When typed keys are 'abd', program reach here. In this case, we should
       " return 'mapped-ab' if it's defined by noremap, or modify input_queue
-      " then try lookup mapping again.
+      " then try lookup mapping again if it's defined by map.
       if has_key(tree, 'rhs')
         if tree.rhs.nomore
           return {
