@@ -335,7 +335,7 @@ function! s:escape_specialchar(c) abort
 endfunction
 
 function! s:to_digit(c) abort
-  let d = char2nr(a:c) - 48
+  let d = char2nr(a:c) - 48  " char2nr('0') == 48
   if 0 <= d && d <= 9
     return d
   endif
