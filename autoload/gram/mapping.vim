@@ -78,8 +78,8 @@ function! gram#mapping#add_typed_key(s) abort
   let s:input_queue ..= a:s
 endfunction
 
-function! gram#mapping#lookup_mapping() abort
-  let r = s:lookup_mapping(s:current_mode, s:input_queue, 0)
+function! gram#mapping#lookup_mapping(timeout = 0) abort
+  let r = s:lookup_mapping(s:current_mode, s:input_queue, a:timeout)
   if r.completed
     let s:input_queue = r.unprocessed
     return {'resolved': r.rhs, 'count': r.count, 'count1': r.count1}
