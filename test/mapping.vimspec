@@ -327,6 +327,39 @@ Describe gram/mapping.vim
             \ })
     End
 
+    It removes mapping 4
+      call gram#mapping#noremap('testmode', 'ab', 'rhs-ab')
+      call gram#mapping#noremap('testmode', 'a', 'rhs-a')
+      call gram#mapping#unmap('testmode', 'a')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
+            \ {'a': {'b': {'rhs': {'nomore': 1, 'mapto': 'rhs-ab'}}}}
+            \})
+    End
+
+    It removes mapping 5
+      call gram#mapping#noremap('testmode', 'ab', 'rhs-ab')
+      call gram#mapping#noremap('testmode', 'acde', 'rhs-acde')
+      call gram#mapping#unmap('testmode', 'acde')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
+            \ {'a': {'b': {'rhs': {'nomore': 1, 'mapto': 'rhs-ab'}}}}
+            \})
+    End
+
+    It removes mapping 6
+      call gram#mapping#noremap('testmode', 'ab', 'rhs-ab')
+      call gram#mapping#noremap('testmode', 'acde', 'rhs-acde')
+      call gram#mapping#noremap('testmode', 'acdf', 'rhs-acdf')
+      call gram#mapping#unmap('testmode', 'acde')
+      Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
+            \ {'a': {
+            \  'b': {'rhs': {'nomore': 1, 'mapto': 'rhs-ab'}},
+            \  'c': {'d': {'f': {'rhs': {'nomore': 1, 'mapto': 'rhs-acdf'}}}}
+            \ }}})
+    End
+
+
+
+
   End
 
   Describe timeoutlen
