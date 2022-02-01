@@ -7,11 +7,7 @@ let s:modeopt_default = {
       \'handle_count': 1,
       \}
 let s:modeopts = {}
-let s:maptree = {
-      \'rhs': {},
-      \'submap': {},
-      \}
-let s:maptree_sets = {}  " {mode: s:maptree}
+let s:maptree_sets = {}
 
 " If user typed a key (this event should be notified via API by others such
 " as gram/core.vim), (re)start a timer for timeoutlen.
@@ -30,7 +26,7 @@ let s:Callback_on_timeout = v:null
 "     'b': {
 "       'rhs': {
 "         'nomore': 1,
-"         'mapto': 'rhs-of-a'
+"         'mapto': 'rhs-of-ab'
 "       }
 "     }
 "   }
@@ -270,14 +266,6 @@ endfunction
 
 function! s:escape_specialchar(c) abort
   return eval(printf('"%s"', '\' .. a:c))
-endfunction
-
-function! s:to_digit(c) abort
-  let d = char2nr(a:c) - 48  " char2nr('0') == 48
-  if 0 <= d && d <= 9
-    return d
-  endif
-  return -1
 endfunction
 
 function! s:is_digit(c) abort
