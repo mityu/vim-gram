@@ -1,6 +1,6 @@
 scriptversion 4
 
-let s:input_queue = ''
+let s:input_stack = ''
 let s:modeopt_default = {
       \'handle_count': 1,
       \}
@@ -45,13 +45,13 @@ function! gram#mapping#unmap(mode, lhs) abort
 endfunction
 
 function! gram#mapping#add_typed_key(s) abort
-  let s:input_queue ..= a:s
+  let s:input_stack ..= a:s
 endfunction
 
 function! gram#mapping#lookup_mapping(mode, timeout = 0) abort
-  let r = s:lookup_mapping(a:mode, s:input_queue, a:timeout)
+  let r = s:lookup_mapping(a:mode, s:input_stack, a:timeout)
   if r.completed
-    let s:input_queue = r.unprocessed
+    let s:input_stack = r.unprocessed
     return {'resolved': r.rhs, 'count': r.count, 'count1': r.count1}
   endif
   return {'resolved': '', 'count': 0, 'count1': 1}
@@ -242,11 +242,11 @@ endfunction
 
 " Internal functions
 function! gram#mapping#_get_input_queue() abort
-  return s:input_queue
+  return s:input_stack
 endfunction
 
 function! gram#mapping#_clear_input_queue() abort
-  let s:input_queue = ''
+  let s:input_stack = ''
 endfunction
 
 function! gram#mapping#_clear_mapping(mode) abort
