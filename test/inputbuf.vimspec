@@ -1,0 +1,119 @@
+Describe gram/inputbuf.vim
+  Before each
+    call gram#inputbuf#clear()
+  End
+
+  Describe add_string()
+    It appends string
+      call gram#inputbuf#add_string('a')
+      Assert Equals(gram#inputbuf#get_text(), 'a')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 2)
+    End
+
+    It inserts string
+      call gram#inputbuf#set_text('abc')
+      call gram#inputbuf#set_cursor_column(2)
+      call gram#inputbuf#add_string('x')
+      Assert Equals(gram#inputbuf#get_text(), 'axbc')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 3)
+    End
+
+    It inserts multibyte string
+      call gram#inputbuf#set_text('abc')
+      call gram#inputbuf#set_cursor_column(2)
+      call gram#inputbuf#add_string('あ')
+      Assert Equals(gram#inputbuf#get_text(), 'aあbc')
+      Assert Equals(gram#inputbuf#get_cursor_column(), strlen('aあ') + 1)
+    End
+
+  End
+
+  Describe delete_character()
+    It deletes a character
+      call gram#inputbuf#set_text('abc')
+      call gram#inputbuf#set_cursor_column(3)
+      call gram#inputbuf#delete_character()
+      Assert Equals(gram#inputbuf#get_text(), 'ac')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 2)
+    End
+
+  End
+
+  Describe delete_word()
+    It deletes a word 1
+      call gram#inputbuf#set_text('abc')
+      call gram#inputbuf#set_cursor_column(4)
+      call gram#inputbuf#delete_word()
+      Assert Equals(gram#inputbuf#get_text(), '')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 1)
+    End
+
+    It deletes a word 2
+      call gram#inputbuf#set_text('abc')
+      call gram#inputbuf#set_cursor_column(3)
+      call gram#inputbuf#delete_word()
+      Assert Equals(gram#inputbuf#get_text(), 'c')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 1)
+    End
+
+    It deletes a word 3
+      call gram#inputbuf#set_text('abc def')
+      call gram#inputbuf#set_cursor_column(8)
+      call gram#inputbuf#delete_word()
+      Assert Equals(gram#inputbuf#get_text(), 'abc ')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 5)
+    End
+
+    It deletes a word 4
+      call gram#inputbuf#set_text('abc def ')
+      call gram#inputbuf#set_cursor_column(9)
+      call gram#inputbuf#delete_word()
+      Assert Equals(gram#inputbuf#get_text(), 'abc ')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 5)
+    End
+
+    It deletes a word 5
+      call gram#inputbuf#set_text('abc def')
+      call gram#inputbuf#set_cursor_column(5)
+      call gram#inputbuf#delete_word()
+      Assert Equals(gram#inputbuf#get_text(), 'def')
+      Assert Equals(gram#inputbuf#get_cursor_column(), 1)
+    End
+
+  End
+
+  Describe move_left()
+    It makes cursor move left
+      call gram#inputbuf#set_text('a')
+      call gram#inputbuf#set_cursor_column(2)
+      call gram#inputbuf#move_left()
+      Assert Equals(gram#inputbuf#get_cursor_column(), 1)
+    End
+
+    It makes cursor move left (with multibyte-character)
+      call gram#inputbuf#set_text('あ')
+      call gram#inputbuf#set_cursor_column(strlen('あ') + 1)
+      call gram#inputbuf#move_left()
+      Assert Equals(gram#inputbuf#get_cursor_column(), 1)
+    End
+
+  End
+
+  Describe move_right()
+    It makes cursor move right
+      call gram#inputbuf#set_text('a')
+      call gram#inputbuf#set_cursor_column(1)
+      call gram#inputbuf#move_right()
+      Assert Equals(gram#inputbuf#get_cursor_column(), 2)
+    End
+
+    It makes cursor move right (with multibyte-character)
+      call gram#inputbuf#set_text('あ')
+      call gram#inputbuf#set_cursor_column(1)
+      call gram#inputbuf#move_right()
+      Assert Equals(gram#inputbuf#get_cursor_column(), strlen('あ') + 1)
+    End
+
+  End
+
+End
