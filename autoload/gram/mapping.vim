@@ -1,19 +1,11 @@
 scriptversion 4
-" TODO: 'timeoutlen' feature should be provided as an separate program?
 
 let s:input_queue = ''
-let s:current_mode = ''
 let s:modeopt_default = {
       \'handle_count': 1,
       \}
 let s:modeopts = {}
 let s:maptree_sets = {}
-
-" If user typed a key (this event should be notified via API by others such
-" as gram/core.vim), (re)start a timer for timeoutlen.
-let s:opt_timeoutlen = &timeoutlen
-let s:timeoutlen_timer_id = 0
-let s:Callback_on_timeout = v:null
 
 
 " Mapping related functions
@@ -56,8 +48,8 @@ function! gram#mapping#add_typed_key(s) abort
   let s:input_queue ..= a:s
 endfunction
 
-function! gram#mapping#lookup_mapping(timeout = 0) abort
-  let r = s:lookup_mapping(s:current_mode, s:input_queue, a:timeout)
+function! gram#mapping#lookup_mapping(mode, timeout = 0) abort
+  let r = s:lookup_mapping(a:mode, s:input_queue, a:timeout)
   if r.completed
     let s:input_queue = r.unprocessed
     return {'resolved': r.rhs, 'count': r.count, 'count1': r.count1}
@@ -217,18 +209,18 @@ endfunction
 
 
 " Mode and mode option related functions
-function! gram#mapping#switch_mode(mode) abort
-  let s:current_mode = a:mode
-endfunction
-
-function! gram#mapping#get_mode() abort
-  return s:current_mode
-endfunction
-
 function! gram#mapping#add_mode(mode) abort
   if !has_key(s:maptree_sets, a:mode)
     let s:maptree_sets[a:mode] = {}
     let s:modeopts[a:mode] = copy(s:modeopt_default)
+  endif
+endfunction
+
+function! gram#mapping#delete_mode(mode) abort
+  if has_key(s:maptree_sets, a:mode)
+    call remove(s:maptree_sets, a:mode)
+  else
+    " TODO: Notify
   endif
 endfunction
 
@@ -245,54 +237,6 @@ endfunction
 
 function! gram#mapping#get_mode_options(mode)
   return copy(s:modeopts[a:mode])
-endfunction
-
-
-" Timer related functions
-function! gram#mapping#start_timeoutlen_timer() abort
-  call gram#mapping#stop_timeoutlen_timer()
-  let s:timeoutlen_timer_id = timer_start(s:opt_timeoutlen, funcref('s:timeoutlen_timer_callback'))
-endfunction
-
-function! gram#mapping#stop_timeoutlen_timer() abort
-  if s:timeoutlen_timer_id != 0
-    call timer_stop(s:timeoutlen_timer_id)
-    let s:timeoutlen_timer_id = 0
-  endif
-endfunction
-
-function! gram#mapping#set_callback_on_timeout(fn) abort
-  let s:Callback_on_timeout = a:fn
-endfunction
-
-function! gram#mapping#set_timeoutlen(timeoutlen) abort
-  let s:opt_timeoutlen = a:timeoutlen
-endfunction
-
-function! gram#mapping#get_timeoutlen() abort
-  return s:opt_timeoutlen
-endfunction
-
-function! s:timeoutlen_timer_callback(_) abort
-  let s:timeoutlen_timer_id = 0
-  if s:input_queue ==# ''  " Do not call callback when the queue is empty
-    return
-  endif
-
-  let input = s:input_queue
-  let s:input_queue = ''
-  let t = type(s:Callback_on_timeout)
-  if t == v:t_string || t == v:t_func
-    while 1
-      let r = s:lookup_mapping(s:current_mode, input, 1)
-      call call(s:Callback_on_timeout,
-            \ [{'resolved': r.rhs, 'count': r.count, 'count1': r.count1}])
-      if r.unprocessed == ''
-        break
-      endif
-      let input = r.unprocessed
-    endwhile
-  endif
 endfunction
 
 

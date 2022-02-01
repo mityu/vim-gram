@@ -1,7 +1,7 @@
 Describe gram/mapping.vim
-  Before all
-    call gram#mapping#add_mode('testmode')
-  End
+  " Before all
+  "   call gram#mapping#add_mode('testmode')
+  " End
 
   Before each
     call gram#mapping#_clear_entire_mapping()
@@ -15,15 +15,6 @@ Describe gram/mapping.vim
       Assert Equals(gram#mapping#_get_input_queue(), 'a')
       call gram#mapping#add_typed_key('b')
       Assert Equals(gram#mapping#_get_input_queue(), 'ab')
-    End
-  End
-
-  Describe switch_mode()
-    It sets the current mode
-      call gram#mapping#switch_mode('normal')
-      Assert Equals(gram#mapping#get_mode(), 'normal')
-      call gram#mapping#switch_mode('insert')
-      Assert Equals(gram#mapping#get_mode(), 'insert')
     End
   End
 
@@ -43,7 +34,6 @@ Describe gram/mapping.vim
     Before each
       call gram#mapping#_clear_entire_mapping()
       call gram#mapping#add_mode('testmode')
-      call gram#mapping#switch_mode('testmode')
     End
 
     After all
@@ -64,22 +54,28 @@ Describe gram/mapping.vim
   End
 
   Describe lookup_mapping()
-    Before each
-        call gram#mapping#switch_mode('testmode')
+    Before all
+      function LookupMapping() abort
+        return gram#mapping#lookup_mapping('testmode')
+      endfunction
+    End
+
+    After all
+      delfunction LookupMapping
     End
 
     Context noremap only
       It finds mapping 1
         call gram#mapping#noremap('testmode', 'a', 'testmode-a')
         call gram#mapping#add_typed_key('a')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-a')
+        Assert Equals(LookupMapping().resolved, 'testmode-a')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
       It finds mapping 2
         call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
         call gram#mapping#add_typed_key('ab')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-ab')
+        Assert Equals(LookupMapping().resolved, 'testmode-ab')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
@@ -87,14 +83,14 @@ Describe gram/mapping.vim
         call gram#mapping#noremap('testmode', 'a', 'testmode-a')
         call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
         call gram#mapping#add_typed_key('ab')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-ab')
+        Assert Equals(LookupMapping().resolved, 'testmode-ab')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
       It finds mapping 4
         call gram#mapping#noremap('testmode', 'a', 'testmode-a')
         call gram#mapping#add_typed_key('abc')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-a')
+        Assert Equals(LookupMapping().resolved, 'testmode-a')
         Assert Equals(gram#mapping#_get_input_queue(), 'bc')
       End
 
@@ -102,7 +98,7 @@ Describe gram/mapping.vim
         call gram#mapping#noremap('testmode', 'abc', 'testmode-abc')
         call gram#mapping#noremap('testmode', 'abcde', 'testmode-abcde')
         call gram#mapping#add_typed_key('abcdf')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-abc')
+        Assert Equals(LookupMapping().resolved, 'testmode-abc')
         Assert Equals(gram#mapping#_get_input_queue(), 'df')
       End
 
@@ -110,13 +106,13 @@ Describe gram/mapping.vim
       It finds no mapping 1
         call gram#mapping#noremap('testmode', 'a', 'testmode-a')
         call gram#mapping#add_typed_key('b')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'b')
+        Assert Equals(LookupMapping().resolved, 'b')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
       It finds no mapping 2
         call gram#mapping#add_typed_key('a')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'a')
+        Assert Equals(LookupMapping().resolved, 'a')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
@@ -124,7 +120,7 @@ Describe gram/mapping.vim
         call gram#mapping#noremap('testmode', 'a', 'testmode-a')
         call gram#mapping#noremap('testmode', 'ab', 'testmode-ab')
         call gram#mapping#add_typed_key('a')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, '')
+        Assert Equals(LookupMapping().resolved, '')
         Assert Equals(gram#mapping#_get_input_queue(), 'a')
       End
 
@@ -132,13 +128,13 @@ Describe gram/mapping.vim
         call gram#mapping#noremap('testmode', 'abc', 'testmode-abc')
         call gram#mapping#noremap('testmode', 'wan', 'testmode-wan')
         call gram#mapping#add_typed_key('wabc')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'w')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-abc')
+        Assert Equals(LookupMapping().resolved, 'w')
+        Assert Equals(LookupMapping().resolved, 'testmode-abc')
 
         call gram#mapping#add_typed_key('wwabc')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'w')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'w')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-abc')
+        Assert Equals(LookupMapping().resolved, 'w')
+        Assert Equals(LookupMapping().resolved, 'w')
+        Assert Equals(LookupMapping().resolved, 'testmode-abc')
       End
     End
 
@@ -147,14 +143,14 @@ Describe gram/mapping.vim
         call gram#mapping#map('testmode', 'a', 'testmode-map-a')
         call gram#mapping#noremap('testmode', 'testmode-map-a', 'testmode-noremap-a')
         call gram#mapping#add_typed_key('a')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 'testmode-noremap-a')
+        Assert Equals(LookupMapping().resolved, 'testmode-noremap-a')
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
 
       It finds the remaped rhs not exist
         call gram#mapping#map('testmode', 'a', 'testmode-map-a')
         call gram#mapping#add_typed_key('a')
-        Assert Equals(gram#mapping#lookup_mapping().resolved, 't')
+        Assert Equals(LookupMapping().resolved, 't')
         Assert Equals(gram#mapping#_get_input_queue(), 'estmode-map-a')
       End
     End
@@ -171,24 +167,24 @@ Describe gram/mapping.vim
 
       It resolves mapping with a 1 digit count
         call gram#mapping#add_typed_key('2a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': '2', 'count': 0, 'count1': 1})
       End
 
       It resolves mapping with a several digits count
         call gram#mapping#add_typed_key('12a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': '1', 'count': 0, 'count1': 1})
       End
 
       It cooperates with count in rhs by noremap
         call gram#mapping#noremap('testmode', 'a', '2mapped-a')
         call gram#mapping#add_typed_key('1a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': '1', 'count': 0, 'count1': 1})
         Assert Equals(gram#mapping#_get_input_queue(), 'a')
 
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': '2mapped-a', 'count': 0, 'count1': 1})
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
@@ -196,10 +192,10 @@ Describe gram/mapping.vim
       It cooperates with count in rhs by map
         call gram#mapping#map('testmode', 'a', '2mapped-a')
         call gram#mapping#add_typed_key('1a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': '1', 'count': 0, 'count1': 1})
         Assert Equals(gram#mapping#_get_input_queue(), 'a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': '2', 'count': 0, 'count1': 1})
         Assert Equals(gram#mapping#_get_input_queue(), 'mapped-a')
       End
@@ -217,26 +213,26 @@ Describe gram/mapping.vim
 
       It resolves mapping
         call gram#mapping#add_typed_key('a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'a', 'count': 0, 'count1': 1})
       End
 
       It resolves mapping with a 1 digit count
         call gram#mapping#add_typed_key('2a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'a', 'count': 2, 'count1': 2})
       End
 
       It resolves mapping with a several digits count
         call gram#mapping#add_typed_key('12a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'a', 'count': 12, 'count1': 12})
       End
 
       It cooperates with count in rhs by noremap
         call gram#mapping#noremap('testmode', 'a', '2mapped-a')
         call gram#mapping#add_typed_key('1a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'mapped-a', 'count': 12, 'count1': 12})
         Assert Equals(gram#mapping#_get_input_queue(), '')
       End
@@ -244,7 +240,7 @@ Describe gram/mapping.vim
       It cooperates with count in rhs by noremap and extra suffix
         call gram#mapping#noremap('testmode', 'a', '2mapped-a')
         call gram#mapping#add_typed_key('1abc')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'mapped-a', 'count': 12, 'count1': 12})
         Assert Equals(gram#mapping#_get_input_queue(), 'bc')
       End
@@ -252,7 +248,7 @@ Describe gram/mapping.vim
       It cooperates with count in rhs by map
         call gram#mapping#map('testmode', 'a', '2mapped-a')
         call gram#mapping#add_typed_key('1a')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'm', 'count': 12, 'count1': 12})
         Assert Equals(gram#mapping#_get_input_queue(), 'apped-a')
       End
@@ -260,7 +256,7 @@ Describe gram/mapping.vim
       It can find mapping when it's consisted only by digits
         call gram#mapping#noremap('testmode', '23', 'mapped-23')
         call gram#mapping#add_typed_key('23')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'mapped-23', 'count': 0, 'count1': 1})
 
       End
@@ -268,21 +264,27 @@ Describe gram/mapping.vim
       It tells count and mapping apart
         call gram#mapping#noremap('testmode', '23', 'mapped-23')
         call gram#mapping#add_typed_key('223')
-        Assert Equals(gram#mapping#lookup_mapping(),
+        Assert Equals(LookupMapping(),
               \ {'resolved': 'mapped-23', 'count': 2, 'count1': 2})
       End
     End
   End
 
   Describe unmap()
+    Before all
+      function LookupMapping() abort
+        return gram#mapping#lookup_mapping('testmode')
+      endfunction
+    End
+
     Before each
       call gram#mapping#_clear_entire_mapping()
       call gram#mapping#add_mode('testmode')
-      call gram#mapping#switch_mode('testmode')
     End
 
     After all
       call gram#mapping#_clear_entire_mapping()
+      delfunction LookupMapping
     End
 
     It removes mapping 1
@@ -297,12 +299,12 @@ Describe gram/mapping.vim
       call gram#mapping#unmap('testmode', 'abc')
 
       call gram#mapping#add_typed_key('abc')
-      Assert Equals(gram#mapping#lookup_mapping().resolved, 'a')
+      Assert Equals(LookupMapping().resolved, 'a')
       Assert Equals(gram#mapping#_get_input_queue(), 'bc')
 
       call gram#mapping#_clear_input_queue()
       call gram#mapping#add_typed_key('abd')
-      Assert Equals(gram#mapping#lookup_mapping().resolved, 'rhs-abd')
+      Assert Equals(LookupMapping().resolved, 'rhs-abd')
       Assert Equals(gram#mapping#_get_input_queue(), '')
       Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
             \ {'a': {'b': {'d': {'rhs': {'nomore': 1, 'mapto': 'rhs-abd'}}}}}
@@ -315,12 +317,12 @@ Describe gram/mapping.vim
       call gram#mapping#unmap('testmode', 'abcefg')
 
       call gram#mapping#add_typed_key('abcefg')
-      Assert Equals(gram#mapping#lookup_mapping().resolved, 'a')
+      Assert Equals(LookupMapping().resolved, 'a')
       Assert Equals(gram#mapping#_get_input_queue(), 'bcefg')
 
       call gram#mapping#_clear_input_queue()
       call gram#mapping#add_typed_key('abd')
-      Assert Equals(gram#mapping#lookup_mapping().resolved, 'rhs-abd')
+      Assert Equals(LookupMapping().resolved, 'rhs-abd')
       Assert Equals(gram#mapping#_get_input_queue(), '')
       Assert Equals(gram#mapping#_get_maptree_sets(), {'testmode':
             \ {'a': {'b': {'d': {'rhs': {'nomore': 1, 'mapto': 'rhs-abd'}}}}}
@@ -362,53 +364,53 @@ Describe gram/mapping.vim
 
   End
 
-  Describe timeoutlen
-    Before all
-      let g:backed = []
-      function TimeoutlenCallback(r)
-        call add(g:backed, a:r.resolved)
-      endfunction
-      call gram#mapping#set_callback_on_timeout('TimeoutlenCallback')
-    End
-
-    After all
-      unlet g:backed
-      delfunc TimeoutlenCallback
-    End
-
-    Before each
-      call gram#mapping#set_timeoutlen(1)
-      call gram#mapping#_clear_input_queue()
-    End
-
-    After each
-      call gram#mapping#stop_timeoutlen_timer()
-      let g:backed = []
-    End
-
-    It notifies timeout
-      call gram#mapping#add_typed_key('abc')
-      call gram#mapping#start_timeoutlen_timer()
-      sleep 30m
-      Assert Equals(g:backed, ['a', 'b', 'c'])
-      Assert Equals(gram#mapping#_get_input_queue(), '')
-    End
-
-    It quits working if stop_timeoutlen_timer() is called
-      call gram#mapping#set_timeoutlen(10)
-      call gram#mapping#add_typed_key('abc')
-      call gram#mapping#start_timeoutlen_timer()
-      call gram#mapping#stop_timeoutlen_timer()
-      sleep 30m
-      Assert Equals(g:backed, [])
-      Assert Equals(gram#mapping#_get_input_queue(), 'abc')
-    End
-
-    It does not call callback when the input queue is empty
-      let g:backed = ['initial']
-      call gram#mapping#start_timeoutlen_timer()
-      sleep 30m
-      Assert Equals(g:backed, ['initial'])
-    End
-  End
+  " Describe timeoutlen
+  "   Before all
+  "     let g:backed = []
+  "     function TimeoutlenCallback(r)
+  "       call add(g:backed, a:r.resolved)
+  "     endfunction
+  "     call gram#mapping#set_callback_on_timeout('TimeoutlenCallback')
+  "   End
+  " 
+  "   After all
+  "     unlet g:backed
+  "     delfunc TimeoutlenCallback
+  "   End
+  " 
+  "   Before each
+  "     call gram#mapping#set_timeoutlen(1)
+  "     call gram#mapping#_clear_input_queue()
+  "   End
+  " 
+  "   After each
+  "     call gram#mapping#stop_timeoutlen_timer()
+  "     let g:backed = []
+  "   End
+  " 
+  "   It notifies timeout
+  "     call gram#mapping#add_typed_key('abc')
+  "     call gram#mapping#start_timeoutlen_timer()
+  "     sleep 30m
+  "     Assert Equals(g:backed, ['a', 'b', 'c'])
+  "     Assert Equals(gram#mapping#_get_input_queue(), '')
+  "   End
+  " 
+  "   It quits working if stop_timeoutlen_timer() is called
+  "     call gram#mapping#set_timeoutlen(10)
+  "     call gram#mapping#add_typed_key('abc')
+  "     call gram#mapping#start_timeoutlen_timer()
+  "     call gram#mapping#stop_timeoutlen_timer()
+  "     sleep 30m
+  "     Assert Equals(g:backed, [])
+  "     Assert Equals(gram#mapping#_get_input_queue(), 'abc')
+  "   End
+  " 
+  "   It does not call callback when the input queue is empty
+  "     let g:backed = ['initial']
+  "     call gram#mapping#start_timeoutlen_timer()
+  "     sleep 30m
+  "     Assert Equals(g:backed, ['initial'])
+  "   End
+  " End
 End
