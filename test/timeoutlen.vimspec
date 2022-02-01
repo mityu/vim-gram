@@ -1,0 +1,36 @@
+Describe timeoutlen-timer
+  Before all
+    let g:called_times = 0
+    function TimeoutCallback()
+      let g:called_times += 1
+    endfunction
+    call gram#mapping#timeoutlen#set_callback_on_timeout(funcref('TimeoutCallback'))
+  End
+
+  Before each
+    let g:called_times = 0
+    call gram#mapping#timeoutlen#set_timeoutlen(1)
+  End
+
+  After each
+    call gram#mapping#timeoutlen#stop_timer()
+  End
+
+  After all
+    delfunction TimeoutCallback
+  End
+
+  It notifies timeout
+    call gram#mapping#timeoutlen#start_timer()
+    sleep 30m
+    Assert Equals(g:called_times, 1)
+  End
+
+  It quits working if stop_timer() is called
+    call gram#mapping#timeoutlen#set_timeoutlen(10)
+    call gram#mapping#timeoutlen#start_timer()
+    call gram#mapping#timeoutlen#stop_timer()
+    sleep 30m
+    Assert Equals(g:called_times, 0)
+  End
+End
