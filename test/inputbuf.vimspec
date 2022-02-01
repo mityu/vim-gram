@@ -1,6 +1,14 @@
 Describe gram/inputbuf.vim
+  Before all
+    call gram#inputbuf#setup({-> 0})
+  End
+
   Before each
     call gram#inputbuf#clear()
+  End
+
+  After all
+    call gram#inputbuf#quit()
   End
 
   Describe add_string()

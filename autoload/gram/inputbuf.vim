@@ -3,6 +3,16 @@ scriptversion 4
 " The cursor column is 1 indexed as same as Vim in insert mode.
 let s:text = ''
 let s:column = 1
+let s:CallbackOnTextChanged = v:null
+
+function! gram#inputbuf#setup(F) abort
+  let s:CallbackOnTextChanged = a:F
+  call gram#inputbuf#clear()
+endfunction
+
+function! gram#inputbuf#quit() abort
+  let s:CallbackOnTextChanged = v:null
+endfunction
 
 function! s:sep_at_column() abort
   return [strpart(s:text, 0, s:column - 1), s:text[s:column - 1 :]]
@@ -12,6 +22,7 @@ function! gram#inputbuf#add_string(c) abort
   let t = s:sep_at_column()
   let s:text = t[0] .. a:c .. t[1]
   let s:column += strlen(a:c)
+  call call(s:CallbackOnTextChanged, [])
 endfunction
 
 function! gram#inputbuf#delete_by_pattern(p) abort
@@ -26,6 +37,7 @@ function! gram#inputbuf#delete_by_pattern(p) abort
   endif
   let s:text = strpart(s:text, 0, s) .. s:text[e :]
   let s:column = s + 1
+  call call(s:CallbackOnTextChanged, [])
 endfunction
 
 function! gram#inputbuf#clear() abort
@@ -51,6 +63,7 @@ endfunction
 
 function gram#inputbuf#set_text(text) abort
   let s:text = a:text
+  call call(s:CallbackOnTextChanged, [])
 endfunction
 
 function! gram#inputbuf#get_text() abort
