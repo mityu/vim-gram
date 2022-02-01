@@ -1,0 +1,32 @@
+Describe gram/mapping/getchar.vim
+  Before all
+    let g:typed = []
+    function Callback(c) abort
+      call add(g:typed, a:c)
+    endfunction
+    call gram#getchar#setup('Callback')
+  End
+
+  Before each
+    let g:typed = []
+  End
+
+  After all
+    call gram#getchar#quit()
+  End
+
+  It gets typed character
+    call feedkeys('abc', 'tx')
+    Assert Equals(g:typed, ['a', 'b', 'c'])
+  End
+
+  It does not typed character after quitting
+    try
+      call gram#getchar#quit()
+      call feedkeys('abc', 'tx')
+      Assert Equals(g:typed, [])
+    finally
+      call gram#getchar#setup('Callback')
+    endtry
+  End
+End
