@@ -88,7 +88,7 @@ endfunction
 function! s:unmap(mode, lhs) abort
   let lhs = split(s:unify_specialchar(a:lhs), '\zs')
   let tree = s:maptree_sets[a:mode]
-  let tree_hist = []
+  let remove_point = {'tree': {}, 'key': ''}
   for c in lhs
     if !has_key(tree, c)
       " TODO: Show error in another way (and return false?)
@@ -96,7 +96,15 @@ function! s:unmap(mode, lhs) abort
       return
     endif
 
-    call insert(tree_hist, {'tree': tree, 'key': c})
+    let count = len(tree[c])
+    if count >= 3 || (count == 2 && !has_key(tree, 'rhs'))
+      let remove_point.tree = {}
+      let remove_point.key = ''
+    elseif empty(remove_point.tree)
+      let remove_point.tree = tree
+      let remove_point.key = c
+    endif
+
     let tree = tree[c]
   endfor
 
@@ -106,16 +114,13 @@ function! s:unmap(mode, lhs) abort
       return
   endif
 
-  call remove(tree, 'rhs')
 
-  " Cleanup tree; remove empty nodes
-  for h in tree_hist
-    if empty(h.tree[h.key])
-      call remove(h.tree, h.key)
-    else
-      break
-    endif
-  endfor
+  if empty(remove_point.tree)
+    call remove(tree, 'rhs')
+  else
+    " Cleanup tree; remove empty nodes
+    call remove(remove_point.tree, remove_point.key)
+  endif
 endfunction
 
 function! s:lookup_mapping(mode, input, timeouted) abort
