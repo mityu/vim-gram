@@ -2,7 +2,6 @@ scriptversion 4
 
 let s:actions = {}
 
-" TODO: Make it be able to register source-specific actions.
 function! gram#action#register(mode, action_name, action_func) abort
   " TODO: Need to check for mode?
   if !has_key(s:actions, a:mode)
@@ -13,8 +12,9 @@ endfunction
 
 function! gram#action#unregister(mode, action_name) abort
   if !has_key(s:actions[a:mode], a:action_name)
+    call gram#ui#notify_error(expand('<stack>'))
     call gram#ui#notify_error(
-          \ printf('Unknown action: (mode, name) = (%s, %s)', a:mode, a:action_name))
+          \ printf('Internal Error: Unknown action: (%s, %s)', a:mode, a:action_name))
     return
   endif
   call remove(s:actions[a:mode], a:action_name)
@@ -22,8 +22,9 @@ endfunction
 
 function! gram#action#get_action_func(mode, action_name) abort
   if !has_key(s:actions[a:mode], a:action_name)
+    call gram#ui#notify_error(expand('<stack>'))
     call gram#ui#notify_error(
-          \ printf('Unknown action: (mode, name) = (%s, %s)', a:mode, a:action_name))
+          \ printf('Internal Error: Unknown action: (%s, %s)', a:mode, a:action_name))
     return
   endif
   return s:actions[a:mode][a:action_name]
