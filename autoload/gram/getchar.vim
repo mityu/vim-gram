@@ -2,6 +2,7 @@ scriptversion 4
 
 let s:popupID = 0
 let s:CallbackOnKeyTyped = v:null
+let s:ignore_keys = ''
 
 function! gram#getchar#setup(Callback) abort
   let s:CallbackOnKeyTyped = a:Callback
@@ -21,7 +22,16 @@ function! gram#getchar#quit() abort
   endif
 endfunction
 
+function! gram#getchar#ignore_follow_keys(keys) abort
+  let s:ignore_keys ..= a:keys
+endfunction
+
 function! s:filter(_, key) abort
+  if s:ignore_keys[: strlen(a:key) - 1] ==# a:key
+    " Go through to Vim.
+    let s:ignore_keys = s:ignore_keys[strlen(a:key) :]
+    return 0
+  endif
   call call(s:CallbackOnKeyTyped, [a:key])
   return 1  " No more evaluation
 endfunction
