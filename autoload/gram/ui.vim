@@ -2,6 +2,7 @@ scriptversion 4
 
 let s:UIs = {}
 let s:active_UI = {}
+let s:active_UI_name = ''
 
 function! gram#ui#register(name, ui) abort
   let s:UIs[a:name] = a:ui
@@ -22,6 +23,25 @@ function! gram#ui#activate_UI(name) abort
     return
   endif
   let s:active_UI = s:UIs[a:name]
+  let s:active_UI_name = a:name
+endfunction
+
+function! gram#ui#get_active_UI() abort
+  return s:active_UI_name
+endfunction
+
+function! gram#ui#quit() abort
+  call s:active_UI.quit()
+  let s:active_UI = {}
+  let s:active_UI_name = ''
+endfunction
+
+function! gram#ui#on_selected_item_changed(idx) abort
+  call s:active_UI.on_selected_item_changed(a:idx)
+endfunction
+
+function! gram#ui#on_input_changed(text, column) abort
+  call s:active_UI.on_input_changed(a:text, a:column)
 endfunction
 
 function! gram#ui#notify_error(msg) abort
