@@ -20,6 +20,8 @@ function! gram#ui#activate_UI(name) abort
   if !has_key(s:UIs, a:name)
     call s:echoerr('Unknown UI module: ' .. a:name)
     call s:echoerr('Use built-in headless UI instead temporally.')
+    let s:active_UI_name = 'headless'
+    let s:active_UI = s:headless_UI
     return
   endif
   let s:active_UI = s:UIs[a:name]
@@ -28,6 +30,10 @@ endfunction
 
 function! gram#ui#get_active_UI() abort
   return s:active_UI_name
+endfunction
+
+function! gram#ui#setup() abort
+   call s:active_UI.setup()
 endfunction
 
 function! gram#ui#quit() abort
@@ -63,6 +69,7 @@ function! s:echoerr(msg) abort
   echohl Error
   for m in split(a:msg, "\n")
     echomsg '[gram]' m
+  endfor
   echohl NONE
 endfunction
 
@@ -70,4 +77,16 @@ endfunction
 let s:headless_UI = {}
 function! s:headless_UI.notify_error(msg) abort
   call s:echoerr(a:msg)
+endfunction
+
+function! s:headless_UI.setup() abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.on_selected_item_changed(idx) abort
+  " Do Nothing
+endfunction
+
+function! s:headless_UI.quit() abort
+  " Do nothing.
 endfunction

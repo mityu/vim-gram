@@ -1,4 +1,6 @@
 scriptversion 4
+" core.vim can depend on any other script, but any other script, except for
+" custom.vim, cannot depend on core.vim
 
 let s:matcher_for_source = {}
 let s:source_prioritized = []
@@ -11,20 +13,37 @@ let s:current_mode = 'normal'
 const s:valid_modes = ['normal', 'insert']
 " let s:should_clear_matched_items = 0
 
+let s:is_initialize_event_fired = 0
+
 function! gram#core#setup(config) abort
+  if !s:is_initialize_event_fired
+    " doautocmd User gram-initialize
+    let s:is_initialize_event_fired = 1
+  endif
+
+  call gram#core#switch_mode('normal')
+  " TODO: Make it available to set default UI
+  call gram#ui#activate_UI(a:config.UI)
   for s in a:config.sources
     " {name: "source-name", matcher: "matcher-name"}
     call add(s:source_prioritized, s.name)
     let s:matcher_for_source[s.name] = s.matcher
   endfor
-  call gram#ui#activate_UI(a:config.UI)  " TODO: Make it available to set default UI
   for m in s:valid_modes
     call gram#mapping#add_mode(m)
   endfor
+  call gram#mapping#set_mode_options('insert', {'handle_count': 0})
+  call gram#inputbuf#setup(funcref('s:on_input_changed'))
+  call gram#getchar#setup(funcref('gram#core#on_key_typed'))
+  " TODO: Pass UI options
+  call gram#ui#setup()
 endfunction
 
 function! gram#core#quit() abort
   " TODO: Stop matcher, stop source
+  call gram#inputbuf#quit()
+  call gram#getchar#quit()
+  call gram#ui#quit()
   let s:matcher_for_source = {}
   let s:source_prioritized = []
   let s:source_candidates = {}
@@ -84,7 +103,15 @@ function! gram#core#invoke_matcher_of_one_matcher(matcher_name, source_name, fil
 endfunction
 
 function! gram#core#add_matched_items(source_name, items) abort
+  let total = 0
+  for s in s:source_prioritized
+    let total += len(gram#core#get_matched_items(s))
+    if s == a:source_name
+      break
+    endif
+  endfor
   call extend(s:matched_items[a:source_name], a:items)
+  " call gram#ui#on_items_added(total, a:items)
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
@@ -93,6 +120,19 @@ endfunction
 
 function! gram#core#clear_matched_items(source_name) abort
   let s:matched_items[a:source_name] = []
+endfunction
+
+function! gram#core#get_selected_item() abort
+  let total = 0
+  for s in s:source_prioritized
+    let items = gram#core#get_matched_items(s)
+    let count = len(items)
+    if (total + count) > s:selected_item_index
+      return items[s:selected_item_index - total]
+    else
+      let total += count
+    endif
+  endfor
 endfunction
 
 function! gram#core#on_key_typed(c) abort
@@ -111,11 +151,21 @@ function! s:process_inputs(timeout) abort
       " No mappings found
       break
     endif
-    " TODO: Check action exists or not and if not exists, do fallback.
-    let l:F = gram#action#get_action_func(s:current_mode, r.mapto)
-    call remove(r, 'mapto')
-    call call(l:F, [r])
+    let [action, params] = split(r.mapto, '^.\{-}\zs%', 1)
+    if action ==# '' || !gram#action#exists(action)
+      " TODO: Do fallback
+    else
+      let l:F = gram#action#get_action_func(s:current_mode, r.mapto)
+      call call(l:F, [{'count': r.count, 'count1': r.count1}, params])
+    endif
   endwhile
+endfunction
+
+function! s:on_input_changed() abort
+  let text = gram#inputbuf#get_text()
+  let column = gram#inputbuf#get_cursor_column()
+  call gram#core#invoke_matcher_with_filter_text(text)
+  call gram#ui#on_input_changed(text, column)
 endfunction
 
 function! gram#core#switch_mode(mode) abort
@@ -124,7 +174,7 @@ function! gram#core#switch_mode(mode) abort
     call gram#ui#notify_error('Internal Error: Not a valid mode: ' .. a:mode)
     return
   endif
-  let s:current_mode = 'normal'
+  let s:current_mode = a:mode
 endfunction
 
 function! gram#core#get_mode() abort
@@ -135,18 +185,77 @@ function! gram#core#get_active_sources() abort
   return deepcopy(s:source_prioritized)
 endfunction
 
-function! gram#core#select_next_item() abort
+function! gram#core#select_next_item(c, _) abort
   let total = 0
   for s in s:source_prioritized
     let total += len(gram#core#get_matched_items(s))
   endfor
-  let s:selected_item_index = (s:selected_item_index + 1) % total
+  if total == 0
+    return
+  endif
+  let s:selected_item_index = (s:selected_item_index + c.count1) % total
+  call s:set_select_item_idx(s:selected_item_index)
 endfunction
 
-function! gram#core#select_prev_item() abort
+function! gram#core#select_prev_item(c, _) abort
   let total = 0
   for s in s:source_prioritized
     let total += len(gram#core#get_matched_items(s))
   endfor
-  let s:selected_item_index = (s:selected_item_index + total - 1) % total
+  if total == 0
+    return
+  endif
+  let s:selected_item_index = s:selected_item_index - c.count1
+  while s:selected_item_index < 0
+    let s:selected_item_index += total
+  endwhile
+  call s:set_select_item_idx(s:selected_item_idx)
+endfunction
+
+function! s:set_select_item_idx(idx) abort
+  let s:selected_item_index = a:idx
+  call gram#ui#on_selected_item_chagned(a:idx)
+endfunction
+
+function! gram#core#item_action(c, params) abort
+  if gram#item_action#exists(params)
+    let items = [gram#core#get_selected_item()]  " TODO: Check marked items
+    let l:F = gram#item_action#get_action_func(params)
+    call call(l:F, [items])
+  endif
+endfunction
+
+function! gram#core#register_actions() abort
+  let l:Normal = {n, F -> gram#action#register('normal', n, F)}
+  call l:Normal('select-prev-item', 'gram#core#select_prev_item')
+  call l:Normal('select-next-item', 'gram#core#select_next_item')
+  call l:Normal('switch-to-insert', {-> gram#core#switch_mode('insert')})
+  call l:Normal('quit', 'gram#core#quit')
+  " call l:Normal('do-default-item-action', )
+  call l:Normal('do-item-action', 'gram#core#item_action')
+
+  let l:Insert = {n, F -> gram#action#register('insert', n, F)}
+  call l:Insert('switch-to-normal', {-> gram#core#switch_mode('normal')})
+  call l:Insert('delete-character', {-> gram#inputbuf#delete_character()})
+  call l:Insert('delete-word', {-> gram#inputbuf#delete_word()})
+  call l:Insert('move-left', {-> gram#inputbuf#move_left()})
+  call l:Insert('move-right', {-> gram#inputbuf#move_right()})
+  call l:Insert('clear-line', {-> gram#inputbuf#clear()})
+endfunction
+
+function! gram#core#map_action(mode, lhs, action_name, params = '') abort
+  call gram#mapping#noremap(a:mode, a:lhs, a:action_name .. '%' .. a:params)
+endfunction
+
+function! gram#core#noremap_keys(mode, lhs, rhs) abort
+  call gram#mapping#noremap(a:mode, a:lhs, a:rhs)
+endfunction
+
+function! gram#core#map_keys(mode, lhs, rhs) abort
+  call gram#mapping#map(a:mode, a:lhs, a:rhs)
+endfunction
+
+function! gram#core#feedkeys_to_vim(keys, mode = '') abort
+  call gram#getchar#ignore_follow_keys(a:keys)
+  call feedkeys(a:keys, a:mode)
 endfunction

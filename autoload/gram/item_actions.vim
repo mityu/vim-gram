@@ -1,4 +1,5 @@
 scriptversion 4
+" TODO: Make 'kind' specification necessary?
 
 let s:actions = {}
 
