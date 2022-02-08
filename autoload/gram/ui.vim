@@ -32,14 +32,22 @@ function! gram#ui#get_active_UI() abort
   return s:active_UI_name
 endfunction
 
-function! gram#ui#setup() abort
-   call s:active_UI.setup()
+function! gram#ui#setup(params) abort
+   call s:active_UI.setup(a:params)
 endfunction
 
 function! gram#ui#quit() abort
   call s:active_UI.quit()
   let s:active_UI = {}
   let s:active_UI_name = ''
+endfunction
+
+function! gram#ui#on_items_added(idx, items) abort
+  call s:active_UI.on_items_added(a:idx, a:items)
+endfunction
+
+function! gram#ui#on_items_deleted(ibegin, iend) abort
+  call s:active_UI.on_items_deleted(a:ibegin, a:iend)
 endfunction
 
 function! gram#ui#on_selected_item_changed(idx) abort
@@ -79,7 +87,19 @@ function! s:headless_UI.notify_error(msg) abort
   call s:echoerr(a:msg)
 endfunction
 
-function! s:headless_UI.setup() abort
+function! s:headless_UI.setup(_) abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.on_input_changed(text, column) abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.on_items_added(idx, items) abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.on_items_deleted(ibeggin, iend) abort
   " Do nothing
 endfunction
 

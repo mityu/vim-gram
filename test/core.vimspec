@@ -8,7 +8,10 @@ Describe gram/core.vim
             \ 'match': {items, input, callback ->
             \       callback(filter(items, 'stridx(v:val, input) >= 0'))}
             \ })
-      call gram#core#setup({'sources': [{'name': 'test', 'matcher': 'stridx'}]})
+      call gram#core#setup({
+            \ 'sources': [{'name': 'test', 'matcher': 'stridx'}],
+            \ 'UI': '',
+            \ })
     End
 
     After all
@@ -65,7 +68,10 @@ Describe gram/core.vim
             \ })
         call add(g:sources, {'name': 'test' .. g:i, 'matcher': 'stridx' .. g:i})
       endfor
-      call gram#core#setup({'sources': g:sources})
+      call gram#core#setup({
+            \ 'sources': g:sources,
+            \ 'UI': '',
+            \ })
       unlet g:i
       unlet g:sources
     End

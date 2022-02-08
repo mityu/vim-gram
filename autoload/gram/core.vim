@@ -7,6 +7,7 @@ let s:source_prioritized = []
 let s:source_candidates = {}
 let s:queue_candidates = {}  " Candidates that should be filtered.
 let s:matched_items = {}
+let s:matched_items_counts = {}
 let s:selected_item_index = 0
 let s:should_invoke_matcher = 0
 let s:current_mode = 'normal'
@@ -28,6 +29,8 @@ function! gram#core#setup(config) abort
     " {name: "source-name", matcher: "matcher-name"}
     call add(s:source_prioritized, s.name)
     let s:matcher_for_source[s.name] = s.matcher
+    let s:matched_items[s.name] = []
+    let s:matched_items_counts[s.name] = 0
   endfor
   for m in s:valid_modes
     call gram#mapping#add_mode(m)
@@ -36,7 +39,7 @@ function! gram#core#setup(config) abort
   call gram#inputbuf#setup(funcref('s:on_input_changed'))
   call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   " TODO: Pass UI options
-  call gram#ui#setup()
+  call gram#ui#setup({'prompt_text': '>> '})
 endfunction
 
 function! gram#core#quit() abort
@@ -48,6 +51,7 @@ function! gram#core#quit() abort
   let s:source_prioritized = []
   let s:source_candidates = {}
   let s:matched_items = {}
+  let s:matched_items_counts = {}
 endfunction
 
 function! gram#core#gather_candidates() abort
@@ -71,6 +75,7 @@ function! gram#core#clear_candidates(name) abort
 endfunction
 
 function! gram#core#add_candidates(name, candidates) abort
+  " TODO: Normalize candidates
   call extend(s:source_candidates[a:name], a:candidates)
   call extend(s:queue_candidates[a:name], a:candidates)
   let s:should_invoke_matcher = 1
@@ -105,13 +110,14 @@ endfunction
 function! gram#core#add_matched_items(source_name, items) abort
   let total = 0
   for s in s:source_prioritized
-    let total += len(gram#core#get_matched_items(s))
+    let total += s:matched_items_counts[s]
     if s == a:source_name
       break
     endif
   endfor
   call extend(s:matched_items[a:source_name], a:items)
-  " call gram#ui#on_items_added(total, a:items)
+  let s:matched_items_counts[a:source_name] += len(a:items)
+  call gram#ui#on_items_added(total, a:items)
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
@@ -119,20 +125,34 @@ function! gram#core#get_matched_items(source_name) abort
 endfunction
 
 function! gram#core#clear_matched_items(source_name) abort
+  let ibegin = 0
+  for s in s:source_prioritized
+    if s == a:source_name
+      break
+    endif
+    let ibegin += s:matched_items_counts[s]
+  endfor
+  let iend = ibegin + s:matched_items_counts[a:source_name]
+  let ibegin += 1
+
   let s:matched_items[a:source_name] = []
+  let s:matched_items_counts[a:source_name] = 0
+
+  call gram#ui#on_items_deleted(ibegin, iend)
 endfunction
 
 function! gram#core#get_selected_item() abort
   let total = 0
   for s in s:source_prioritized
-    let items = gram#core#get_matched_items(s)
-    let count = len(items)
+    let count = s:matched_items_counts[s]
     if (total + count) > s:selected_item_index
+      let items = gram#core#get_matched_items(s)
       return items[s:selected_item_index - total]
     else
       let total += count
     endif
   endfor
+  return []  " When no items matched, nothing is selected.
 endfunction
 
 function! gram#core#on_key_typed(c) abort
@@ -164,8 +184,8 @@ endfunction
 function! s:on_input_changed() abort
   let text = gram#inputbuf#get_text()
   let column = gram#inputbuf#get_cursor_column()
-  call gram#core#invoke_matcher_with_filter_text(text)
   call gram#ui#on_input_changed(text, column)
+  call gram#core#invoke_matcher_with_filter_text(text)
 endfunction
 
 function! gram#core#switch_mode(mode) abort
