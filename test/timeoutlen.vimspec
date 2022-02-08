@@ -1,4 +1,4 @@
-Describe timeoutlen-timer
+Describe gram/mapping/timeoutlen.vim
   Before all
     let g:called_times = 0
     function TimeoutCallback()
