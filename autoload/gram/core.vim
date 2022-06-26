@@ -42,6 +42,7 @@ function! gram#core#setup(config) abort
           \ 'matched_items_count': 0,
           \ 'items_to_be_filtered': [],
           \ 'should_invoke_matcher': 0,
+          \ 'should_clear_matched_items': 0,
           \})
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
@@ -151,6 +152,15 @@ endfunction
 
 function! gram#core#add_matched_items(source_name, items) abort
   let s = gram#core#get_source_dict(a:source_name)
+
+  " A small hack to reduce flickers.
+  " Bad:  clear items -> call matcher -> show matched items
+  " Good: call matcher -> clear items -> show matcher
+  if s.should_clear_matched_items
+    call gram#core#clear_matched_items(s)
+    let s.should_clear_matched_items = 0
+  endif
+
   let total = 0
   for source in s:source_dicts
     let total += source.matched_items_count
@@ -249,9 +259,9 @@ function! s:on_input_changed() abort
   let column = gram#inputbuf#get_cursor_column()
   call gram#ui#on_input_changed(text, column)
   for s in s:source_dicts
-    call gram#core#clear_matched_items(s)
     let s.items_to_be_filtered = deepcopy(s.candidates)
     let s.should_invoke_matcher = 1
+    let s.should_clear_matched_items = 1
   endfor
   call gram#core#invoke_matcher_with_filter_text(text)
 endfunction
