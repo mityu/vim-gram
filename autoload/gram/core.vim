@@ -96,7 +96,7 @@ function! gram#core#add_candidates(name, candidates) abort
   call extend(s.candidates, a:candidates)
   call extend(s.items_to_be_filtered, a:candidates)
   let s:should_invoke_matcher = 1
-  call gram#core#invoke_matcher_with_filter_text(gram#inputbuf#get_text())
+  call gram#core#invoke_matcher_of_one_matcher(s, gram#inputbuf#get_text())
 endfunction
 
 function! gram#core#get_candidates(name) abort
@@ -116,7 +116,6 @@ function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
 endfunction
 
 function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
-  call gram#core#clear_matched_items(a:sourcedict)
   let m = gram#matcher#get(a:sourcedict.matcher)
   let c = remove(a:sourcedict, 'items_to_be_filtered')
   let a:sourcedict.items_to_be_filtered = []
@@ -214,6 +213,7 @@ function! s:on_input_changed() abort
   let column = gram#inputbuf#get_cursor_column()
   call gram#ui#on_input_changed(text, column)
   for s in s:source_dicts
+    call gram#core#clear_matched_items(s)
     let s.items_to_be_filtered = deepcopy(s.candidates)
   endfor
   call gram#core#invoke_matcher_with_filter_text(text)
