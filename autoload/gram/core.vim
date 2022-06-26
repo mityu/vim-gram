@@ -5,18 +5,30 @@ scriptversion 4
 let s:source_dicts = []
 let s:selected_item_index = 0
 let s:should_invoke_matcher = 0
+let s:fallback_on_nomap = {}
 let s:current_mode = 'normal'
 const s:valid_modes = ['normal', 'insert']
 " let s:should_clear_matched_items = 0
 
 let s:is_initialize_event_fired = 0
+augroup plugin-gram-dummy
+  autocmd!
+  autocmd User gram-initialize " Dummy
+augroup END
 
 function! gram#core#setup(config) abort
+  for m in s:valid_modes
+    call gram#mapping#add_mode(m)
+  endfor
+  call gram#core#register_actions()
+
   if !s:is_initialize_event_fired
-    " doautocmd User gram-initialize
+    doautocmd User gram-initialize
     let s:is_initialize_event_fired = 1
   endif
 
+  let s:should_invoke_matcher = 0
+  let s:fallback_on_nomap = {'insert': {r -> gram#inputbuf#add_string(repeat(r.resolved, r.count1))}}
   call gram#core#switch_mode('normal')
   " TODO: Make it available to set default UI
   call gram#ui#activate_UI(a:config.UI)
@@ -36,6 +48,8 @@ function! gram#core#setup(config) abort
   call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   " TODO: Pass UI options
   call gram#ui#setup({'prompt_text': '>> '})
+  call gram#core#gather_candidates()
+  call s:on_input_changed()
 endfunction
 
 function! gram#core#quit() abort
