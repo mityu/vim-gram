@@ -298,18 +298,6 @@ function! gram#core#register_actions() abort
   call l:Insert('clear-line', {-> gram#inputbuf#clear()})
 endfunction
 
-function! gram#core#map_action(mode, lhs, action_name, params = '') abort
-  call gram#mapping#noremap(a:mode, a:lhs, a:action_name .. '%' .. a:params)
-endfunction
-
-function! gram#core#noremap_keys(mode, lhs, rhs) abort
-  call gram#mapping#noremap(a:mode, a:lhs, a:rhs)
-endfunction
-
-function! gram#core#map_keys(mode, lhs, rhs) abort
-  call gram#mapping#map(a:mode, a:lhs, a:rhs)
-endfunction
-
 function! gram#core#feedkeys_to_vim(keys, mode = '') abort
   call gram#getchar#ignore_follow_keys(a:keys)
   call feedkeys(a:keys, a:mode)
