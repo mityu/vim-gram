@@ -44,10 +44,10 @@ function! gram#core#setup(config) abort
           \})
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
-  call gram#inputbuf#setup(funcref('s:on_input_changed'))
-  call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   " TODO: Pass UI options
   call gram#ui#setup({'prompt_text': '>> '})
+  call gram#inputbuf#setup(funcref('s:on_input_changed'))
+  call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   call s:set_select_item_idx(0)
   call gram#core#gather_candidates()
 endfunction

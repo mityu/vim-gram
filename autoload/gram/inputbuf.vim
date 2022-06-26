@@ -43,6 +43,7 @@ endfunction
 function! gram#inputbuf#clear() abort
   let s:text = ''
   let s:column = 1
+  call call(s:CallbackOnTextChanged, [])
 endfunction
 
 function! gram#inputbuf#delete_character() abort
