@@ -2,12 +2,7 @@ scriptversion 4
 " core.vim can depend on any other script, but any other script, except for
 " custom.vim, cannot depend on core.vim
 
-let s:matcher_for_source = {}
-let s:source_prioritized = []
-let s:source_candidates = {}
-let s:queue_candidates = {}  " Candidates that should be filtered.
-let s:matched_items = {}
-let s:matched_items_counts = {}
+let s:source_dicts = []
 let s:selected_item_index = 0
 let s:should_invoke_matcher = 0
 let s:current_mode = 'normal'
@@ -27,13 +22,14 @@ function! gram#core#setup(config) abort
   call gram#ui#activate_UI(a:config.UI)
   for s in a:config.sources
     " {name: "source-name", matcher: "matcher-name"}
-    call add(s:source_prioritized, s.name)
-    let s:matcher_for_source[s.name] = s.matcher
-    let s:matched_items[s.name] = []
-    let s:matched_items_counts[s.name] = 0
-  endfor
-  for m in s:valid_modes
-    call gram#mapping#add_mode(m)
+    call add(s:source_dicts, {
+          \ 'name': s.name,
+          \ 'matcher': s.matcher,
+          \ 'candidates': [],
+          \ 'matched_items': [],
+          \ 'matched_items_count': 0,
+          \ 'items_to_be_filtered': [],
+          \})
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
   call gram#inputbuf#setup(funcref('s:on_input_changed'))
@@ -47,107 +43,122 @@ function! gram#core#quit() abort
   call gram#inputbuf#quit()
   call gram#getchar#quit()
   call gram#ui#quit()
-  let s:matcher_for_source = {}
-  let s:source_prioritized = []
-  let s:source_candidates = {}
-  let s:matched_items = {}
-  let s:matched_items_counts = {}
+  let s:source_dicts = []
+endfunction
+
+function! gram#core#get_source_dict(name) abort
+  for s in s:source_dicts
+    if s.name ==# a:name
+      return s
+    endif
+  endfor
+  echoerr 'unreachable:' a:name
+  return {}
 endfunction
 
 function! gram#core#gather_candidates() abort
-  for s in s:source_prioritized
+  for s in s:source_dicts
     call gram#core#gather_candidates_of_one_source(s)
   endfor
 endfunction
 
-function! gram#core#gather_candidates_of_one_source(name) abort
-  call gram#core#clear_candidates(a:name)
-  let s = gram#source#get(a:name)
+function! gram#core#gather_candidates_of_one_source(sourcedict) abort
+  call gram#core#clear_candidates(a:sourcedict)
+  let s = gram#source#get(a:sourcedict.name)
   call s.gather_candidates({
-        \ 'clear': funcref('gram#core#clear_candidates', [a:name]),
-        \ 'add': funcref('gram#core#add_candidates', [a:name])
+        \ 'clear': funcref('gram#core#clear_candidates', [a:sourcedict]),
+        \ 'add': funcref('gram#core#add_candidates', [a:sourcedict.name])
         \ })
 endfunction
 
-function! gram#core#clear_candidates(name) abort
-  let s:source_candidates[a:name] = []
-  let s:queue_candidates[a:name] = []
+function! gram#core#clear_candidates(sourcedict) abort
+  let a:sourcedict.candidates = []
+  let a:sourcedict.items_to_be_filtered = []
 endfunction
 
 function! gram#core#add_candidates(name, candidates) abort
   " TODO: Normalize candidates
-  call extend(s:source_candidates[a:name], a:candidates)
-  call extend(s:queue_candidates[a:name], a:candidates)
+  let s = gram#core#get_source_dict(a:name)
+  call extend(s.candidates, a:candidates)
+  call extend(s.items_to_be_filtered, a:candidates)
   let s:should_invoke_matcher = 1
+  call gram#core#invoke_matcher_with_filter_text(gram#inputbuf#get_text())
 endfunction
 
 function! gram#core#get_candidates(name) abort
-  return deepcopy(s:source_candidates[a:name])
+  return deepcopy(gram#core#get_source_dict(a:name).candidates)
 endfunction
 
 function! gram#core#get_matcher_of(source_name) abort
-  return s:matcher_for_source[a:source_name]
+  return gram#core#get_source_dict(a:source_name).matcher
 endfunction
 
 function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
   let s:selected_item_index = 0
-  for s in s:source_prioritized
-    call gram#core#invoke_matcher_of_one_matcher(
-          \ gram#core#get_matcher_of(s), s, a:filter_text)
+  for s in s:source_dicts
+    call gram#core#invoke_matcher_of_one_matcher(s, a:filter_text)
   endfor
   let s:should_invoke_matcher = 0
 endfunction
 
-function! gram#core#invoke_matcher_of_one_matcher(matcher_name, source_name, filter_text) abort
-  call gram#core#clear_matched_items(a:source_name)
-  let m = gram#matcher#get(a:matcher_name)
-  let c = remove(s:queue_candidates, a:source_name)
-  let s:queue_candidates[a:source_name] = []
+function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
+  call gram#core#clear_matched_items(a:sourcedict)
+  let m = gram#matcher#get(a:sourcedict.matcher)
+  let c = remove(a:sourcedict, 'items_to_be_filtered')
+  let a:sourcedict.items_to_be_filtered = []
   call m.match(c, a:filter_text,
-        \ funcref('gram#core#add_matched_items', [a:source_name]))
+        \ funcref('gram#core#add_matched_items', [a:sourcedict.name]))
 endfunction
 
 function! gram#core#add_matched_items(source_name, items) abort
+  let s = gram#core#get_source_dict(a:source_name)
+  call extend(s.matched_items, a:items)
   let total = 0
-  for s in s:source_prioritized
-    let total += s:matched_items_counts[s]
-    if s == a:source_name
+  for source in s:source_dicts
+    let total += source.matched_items_count
+    if source.name == a:source_name
       break
     endif
   endfor
-  call extend(s:matched_items[a:source_name], a:items)
-  let s:matched_items_counts[a:source_name] += len(a:items)
+  call extend(s.matched_items, a:items)
+  let s.matched_items_count += len(a:items)
   call gram#ui#on_items_added(total, a:items)
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
-  return s:matched_items[a:source_name]
+  return gram#core#get_source_dict(a:source_name).matched_items
 endfunction
 
-function! gram#core#clear_matched_items(source_name) abort
+function! gram#core#clear_matched_items(sourcedict) abort
+  if empty(a:sourcedict.matched_items)
+    return
+  endif
+
   let ibegin = 0
-  for s in s:source_prioritized
-    if s == a:source_name
+  for s in s:source_dicts
+    if s.name == a:sourcedict.name
       break
     endif
-    let ibegin += s:matched_items_counts[s]
+    let ibegin += s.matched_items_count
   endfor
-  let iend = ibegin + s:matched_items_counts[a:source_name]
-  let ibegin += 1
+  let iend = ibegin + a:sourcedict.matched_items_count - 1
 
-  let s:matched_items[a:source_name] = []
-  let s:matched_items_counts[a:source_name] = 0
+  if iend < ibegin
+    let iend = ibegin
+  endif
+
+  let a:sourcedict.matched_items = []
+  let a:sourcedict.matched_items_count = 0
 
   call gram#ui#on_items_deleted(ibegin, iend)
 endfunction
 
 function! gram#core#get_selected_item() abort
   let total = 0
-  for s in s:source_prioritized
-    let count = s:matched_items_counts[s]
+  for s in s:source_dicts
+    let count = s.matched_items_count
     if (total + count) > s:selected_item_index
-      let items = gram#core#get_matched_items(s)
-      return items[s:selected_item_index - total]
+      return s.matched_items[s:selected_item_index - total]
     else
       let total += count
     endif
@@ -185,6 +196,9 @@ function! s:on_input_changed() abort
   let text = gram#inputbuf#get_text()
   let column = gram#inputbuf#get_cursor_column()
   call gram#ui#on_input_changed(text, column)
+  for s in s:source_dicts
+    let s.items_to_be_filtered = deepcopy(s.candidates)
+  endfor
   call gram#core#invoke_matcher_with_filter_text(text)
 endfunction
 
@@ -202,7 +216,11 @@ function! gram#core#get_mode() abort
 endfunction
 
 function! gram#core#get_active_sources() abort
-  return deepcopy(s:source_prioritized)
+  let ss = []
+  for s in s:source_dicts
+    call add(ss, s.name)
+  endfor
+  return ss
 endfunction
 
 function! gram#core#select_next_item(c, _) abort
