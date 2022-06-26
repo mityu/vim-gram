@@ -87,6 +87,7 @@ function! gram#core#gather_candidates_of_one_source(sourcedict) abort
 endfunction
 
 function! gram#core#clear_candidates(sourcedict) abort
+  " TODO: Also clear matched items?
   let a:sourcedict.candidates = []
   let a:sourcedict.items_to_be_filtered = []
 endfunction
@@ -94,6 +95,7 @@ endfunction
 function! gram#core#add_candidates(name, candidates) abort
   " TODO: Normalize candidates
   let s = gram#core#get_source_dict(a:name)
+  " TODO: deepcopy()?
   call extend(s.candidates, a:candidates)
   call extend(s.items_to_be_filtered, a:candidates)
 
@@ -149,7 +151,6 @@ endfunction
 
 function! gram#core#add_matched_items(source_name, items) abort
   let s = gram#core#get_source_dict(a:source_name)
-  call extend(s.matched_items, a:items)
   let total = 0
   for source in s:source_dicts
     let total += source.matched_items_count
