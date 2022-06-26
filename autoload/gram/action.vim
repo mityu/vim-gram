@@ -25,7 +25,7 @@ function! gram#action#get_action_func(mode, action_name) abort
     call gram#ui#notify_error(expand('<stack>'))
     call gram#ui#notify_error(
           \ printf('Internal Error: Unknown action: (%s, %s)', a:mode, a:action_name))
-    return
+    return 0
   endif
   return s:actions[a:mode][a:action_name]
 endfunction
