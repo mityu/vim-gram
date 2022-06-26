@@ -172,7 +172,16 @@ function! s:lookup_mapping(mode, input, timeouted) abort
       let unprocessed = keys[1 :]
     endif
 
-    if rhs.nomore
+    if opt.handle_count && count == a:input
+      " Wait for more keys; use nothing.
+      return {
+            \'completed': 0,
+            \'rhs': '',
+            \'unprocessed': a:input,
+            \'count': 0,
+            \'count1': 1,
+            \}
+    elseif rhs.nomore
       if opt.handle_count
         let [mapto_count, rhs.mapto] = s:separate_count_and_map(rhs.mapto)
         let count ..= mapto_count

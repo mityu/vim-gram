@@ -217,6 +217,19 @@ Describe gram/mapping.vim
               \ {'resolved': 'a', 'count': 0, 'count1': 1})
       End
 
+      It tells no mapping is found when only [count] is given
+        call gram#mapping#add_typed_key('3')
+        Assert Equals(gram#mapping#_get_input_queue(), '3')
+        Assert Equals(LookupMapping(),
+              \ {'resolved': '', 'count': 0, 'count1': 1})
+        Assert Equals(gram#mapping#_get_input_queue(), '3')
+        call gram#mapping#add_typed_key('4')
+        Assert Equals(gram#mapping#_get_input_queue(), '34')
+        Assert Equals(LookupMapping(),
+              \ {'resolved': '', 'count': 0, 'count1': 1})
+        Assert Equals(gram#mapping#_get_input_queue(), '34')
+      End
+
       It resolves mapping with a 1 digit count
         call gram#mapping#add_typed_key('2a')
         Assert Equals(LookupMapping(),
