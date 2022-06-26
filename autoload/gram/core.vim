@@ -129,10 +129,6 @@ function! gram#core#get_candidates(name) abort
   return deepcopy(gram#core#get_source_dict(a:name).candidates)
 endfunction
 
-function! gram#core#get_matcher_of(source_name) abort
-  return gram#core#get_source_dict(a:source_name).matcher
-endfunction
-
 function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
   call s:set_select_item_idx(0)
   for s in s:source_dicts
