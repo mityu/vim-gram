@@ -12,12 +12,20 @@ Describe gram/core.vim
             \ 'sources': [{'name': 'test', 'matcher': 'stridx'}],
             \ 'UI': '',
             \ })
+      function Filter(text)
+        let s = gram#core#get_source_dict('test')
+        call gram#core#clear_matched_items(s)
+        let s.should_invoke_matcher = 1
+        let s.items_to_be_filtered = deepcopy(s.candidates)
+        call gram#core#invoke_matcher_with_filter_text(a:text)
+      endfunction
     End
 
     After all
       call gram#matcher#clear()
       call gram#source#clear()
       call gram#core#quit()
+      delfunction Filter
     End
 
     Before each
@@ -26,15 +34,18 @@ Describe gram/core.vim
     End
 
     It gathers candidates
+      Assert Equals([], gram#core#get_matched_items('test'))
       call gram#core#gather_candidates()
-      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
+      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_matched_items('test'))
       call gram#core#gather_candidates()
       Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
     End
 
     It filters candidates
       call gram#core#gather_candidates()
-      call gram#core#invoke_matcher_with_filter_text('a')
+      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_matched_items('test'))
+
+      call Filter('a')
       Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
       Assert Equals(['aaa'], gram#core#get_matched_items('test'))
     End
@@ -70,6 +81,15 @@ Describe gram/core.vim
             \ })
       unlet g:i
       unlet g:sources
+      function Filter(text)
+        for name in ['test0', 'test1', 'test2']
+          let s = gram#core#get_source_dict(name)
+          call gram#core#clear_matched_items(s)
+          let s.should_invoke_matcher = 1
+          let s.items_to_be_filtered = deepcopy(s.candidates)
+        endfor
+        call gram#core#invoke_matcher_with_filter_text(a:text)
+      endfunction
     End
 
     After all
@@ -79,6 +99,7 @@ Describe gram/core.vim
       call gram#matcher#clear()
       call gram#source#clear()
       call gram#core#quit()
+      delfunction Filter
     End
 
     Before each
@@ -104,7 +125,8 @@ Describe gram/core.vim
 
     It filters items in source priority order
       call gram#core#gather_candidates()
-      call gram#core#invoke_matcher_with_filter_text('b')
+      let g:matcher_called_order = []
+      call Filter('b')
       Assert Equals(g:matcher_called_order, range(3))
       for c in ['test0', 'test1', 'test2']
         Assert Equals(gram#core#get_matched_items(c), ['bbb'])
