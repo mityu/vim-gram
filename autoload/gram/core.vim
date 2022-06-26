@@ -4,10 +4,10 @@ scriptversion 4
 
 let s:source_dicts = []
 let s:selected_item_index = 0
-let s:should_invoke_matcher = 0
 let s:fallback_on_nomap = {}
 let s:current_mode = 'normal'
 const s:valid_modes = ['normal', 'insert']
+let s:should_block_matcher_call = 0
 " let s:should_clear_matched_items = 0
 
 let s:is_initialize_event_fired = 0
@@ -27,7 +27,7 @@ function! gram#core#setup(config) abort
     let s:is_initialize_event_fired = 1
   endif
 
-  let s:should_invoke_matcher = 0
+  let s:should_block_matcher_call = 0
   let s:fallback_on_nomap = {'insert': {r -> gram#inputbuf#add_string(repeat(r.resolved, r.count1))}}
   call gram#core#switch_mode('normal')
   " TODO: Make it available to set default UI
@@ -41,6 +41,7 @@ function! gram#core#setup(config) abort
           \ 'matched_items': [],
           \ 'matched_items_count': 0,
           \ 'items_to_be_filtered': [],
+          \ 'should_invoke_matcher': 0,
           \})
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
@@ -95,8 +96,33 @@ function! gram#core#add_candidates(name, candidates) abort
   let s = gram#core#get_source_dict(a:name)
   call extend(s.candidates, a:candidates)
   call extend(s.items_to_be_filtered, a:candidates)
-  let s:should_invoke_matcher = 1
-  call gram#core#invoke_matcher_of_one_matcher(s, gram#inputbuf#get_text())
+
+  if s.should_invoke_matcher
+    " Matcher is already invoked.
+    return
+  endif
+
+  " If a source uses job to gather candidates and matcher uses
+  " gram#core#check_key_typed() function, its out_cb can be called while
+  " getchar() calls in gram#core#check_key_typed() in matcher.  And if the
+  " oub_cb is called while the getchar() calls, the function call depth can go
+  " infinitely deep like this:
+  "  matcher
+  "  -> getchar() (in gram#core#check_key_typed())
+  "  -> job's out_cb
+  "  -> add_candidates() (this function)
+  "  -> matcher
+  "  -> ...
+  " In order to avoid this problem, when this function is called while
+  " getchar() calls, call matcher with delay using timer.
+  let s.should_invoke_matcher = 1
+  if gram#core#should_block_matcher_call()
+    call timer_start(0, {-> gram#core#invoke_matcher_of_one_matcher(
+          \gram#core#get_source_dict(a:name),
+          \gram#inputbuf#get_text())})
+  else
+    call gram#core#invoke_matcher_of_one_matcher(s, gram#inputbuf#get_text())
+  endif
 endfunction
 
 function! gram#core#get_candidates(name) abort
@@ -112,15 +138,17 @@ function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
   for s in s:source_dicts
     call gram#core#invoke_matcher_of_one_matcher(s, a:filter_text)
   endfor
-  let s:should_invoke_matcher = 0
 endfunction
 
 function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
-  let m = gram#matcher#get(a:sourcedict.matcher)
-  let c = remove(a:sourcedict, 'items_to_be_filtered')
-  let a:sourcedict.items_to_be_filtered = []
-  call m.match(c, a:filter_text,
-        \ funcref('gram#core#add_matched_items', [a:sourcedict.name]))
+  if a:sourcedict.should_invoke_matcher
+    let a:sourcedict.should_invoke_matcher = 0
+    let m = gram#matcher#get(a:sourcedict.matcher)
+    let c = remove(a:sourcedict, 'items_to_be_filtered')
+    let a:sourcedict.items_to_be_filtered = []
+    call m.match(c, a:filter_text,
+          \ funcref('gram#core#add_matched_items', [a:sourcedict.name]))
+  endif
 endfunction
 
 function! gram#core#add_matched_items(source_name, items) abort
@@ -215,6 +243,7 @@ function! s:on_input_changed() abort
   for s in s:source_dicts
     call gram#core#clear_matched_items(s)
     let s.items_to_be_filtered = deepcopy(s.candidates)
+    let s.should_invoke_matcher = 1
   endfor
   call gram#core#invoke_matcher_with_filter_text(text)
 endfunction
@@ -303,5 +332,24 @@ function! gram#core#feedkeys_to_vim(keys, mode = '') abort
   call feedkeys(a:keys, a:mode)
 endfunction
 
-" function! gram#core#should_abort_matching() abort
-" endfunction
+function! gram#core#check_key_typed() abort
+  " TODO: This function should placed in getchar.vim?
+  try
+    call gram#core#block_matcher_call()
+    return getchar(1)
+  finally
+    call gram#core#unblock_matcher_call()
+  endtry
+endfunction
+
+function! gram#core#block_matcher_call() abort
+  let s:should_block_matcher_call += 1
+endfunction
+
+function! gram#core#unblock_matcher_call() abort
+  let s:should_block_matcher_call -= 1
+endfunction
+
+function! gram#core#should_block_matcher_call() abort
+  return s:should_block_matcher_call
+endfunction

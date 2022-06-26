@@ -41,7 +41,3 @@ function! s:callback(winid, index) abort
   " TODO: reopen
   let s:popupID = 0
 endfunction
-
-function! gram#getchar#check_key_typed() abort
-  return getchar(1)
-endfunction
