@@ -37,10 +37,6 @@ Describe gram/core.vim
       call gram#core#invoke_matcher_with_filter_text('a')
       Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
       Assert Equals(['aaa'], gram#core#get_matched_items('test'))
-      " TODO: item queue should be refreshed when fillter-text is changed.
-      " call gram#core#invoke_matcher_with_filter_text('a')
-      " Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
-      " Assert Equals(['aaa'], gram#core#get_matched_items('test'))
     End
   End
 
