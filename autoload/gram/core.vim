@@ -242,34 +242,34 @@ endfunction
 
 function! gram#core#select_next_item(c, _) abort
   let total = 0
-  for s in s:source_prioritized
-    let total += len(gram#core#get_matched_items(s))
+  for s in s:source_dicts
+    let total += s.matched_items_count
   endfor
   if total == 0
     return
   endif
-  let s:selected_item_index = (s:selected_item_index + c.count1) % total
+  let s:selected_item_index = (s:selected_item_index + a:c.count1) % total
   call s:set_select_item_idx(s:selected_item_index)
 endfunction
 
 function! gram#core#select_prev_item(c, _) abort
   let total = 0
-  for s in s:source_prioritized
-    let total += len(gram#core#get_matched_items(s))
+  for s in s:source_dicts
+    let total += s.matched_items_count
   endfor
   if total == 0
     return
   endif
-  let s:selected_item_index = s:selected_item_index - c.count1
+  let s:selected_item_index = s:selected_item_index - a:c.count1
   while s:selected_item_index < 0
     let s:selected_item_index += total
   endwhile
-  call s:set_select_item_idx(s:selected_item_idx)
+  call s:set_select_item_idx(s:selected_item_index)
 endfunction
 
 function! s:set_select_item_idx(idx) abort
   let s:selected_item_index = a:idx
-  call gram#ui#on_selected_item_chagned(a:idx)
+  call gram#ui#on_selected_item_changed(a:idx)
 endfunction
 
 function! gram#core#item_action(c, params) abort
