@@ -55,8 +55,8 @@ endfunction
 
 function! gram#core#quit() abort
   " TODO: Stop matcher, stop source
-  call gram#inputbuf#quit()
   call gram#getchar#quit()
+  call gram#inputbuf#quit()
   call gram#ui#quit()
   let s:source_dicts = []
 endfunction
@@ -204,6 +204,17 @@ function! gram#core#get_selected_item() abort
 endfunction
 
 function! gram#core#on_key_typed(c) abort
+  if a:c == "\<C-c>"
+    if s:current_mode == 'normal'
+      call gram#core#quit()
+    elseif s:current_mode == 'insert'
+      call gram#core#switch_mode('normal')
+    else
+      call gram#ui#notify_error(
+            \ '[gram.vim] Internal error: Unknown mode: ' .. s:current_mode)
+    endif
+    return
+  endif
   call gram#mapping#add_typed_key(a:c)
   call s:process_inputs(0)
 endfunction

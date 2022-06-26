@@ -3,9 +3,11 @@ scriptversion 4
 let s:popupID = 0
 let s:CallbackOnKeyTyped = v:null
 let s:ignore_keys = ''
+let s:should_reopen = 1
 
 function! gram#getchar#setup(Callback) abort
   let s:CallbackOnKeyTyped = a:Callback
+  let s:should_reopen = 1
   let s:popupID = popup_create('', {
         \ 'mapping': 0,
         \ 'filter': funcref('s:filter'),
@@ -17,6 +19,7 @@ endfunction
 
 function! gram#getchar#quit() abort
   let s:CallbackOnKeyTyped = v:null
+  let s:should_reopen = 0
   if s:popupID != 0
     call popup_close(s:popupID)
   endif
@@ -37,7 +40,8 @@ function! s:filter(_, key) abort
 endfunction
 
 function! s:callback(winid, index) abort
-  " NOTE: This is temporary implementation
-  " TODO: reopen
-  let s:popupID = 0
+  if s:should_reopen
+    call gram#getchar#setup(s:CallbackOnKeyTyped)
+    call call(s:CallbackOnKeyTyped, ["\<C-c>"])
+  endif
 endfunction
