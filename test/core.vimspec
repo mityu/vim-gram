@@ -21,8 +21,8 @@ Describe gram/core.vim
     End
 
     Before each
-      call gram#core#clear_candidates('test')
-      call gram#core#clear_matched_items('test')
+      call gram#core#clear_candidates(gram#core#get_source_dict('test'))
+      call gram#core#clear_matched_items(gram#core#get_source_dict('test'))
     End
 
     It gathers candidates
@@ -87,8 +87,8 @@ Describe gram/core.vim
 
     Before each
       for c in ['test0', 'test1', 'test2']
-        call gram#core#clear_candidates(c)
-        call gram#core#clear_matched_items(c)
+        call gram#core#clear_candidates(gram#core#get_source_dict(c))
+        call gram#core#clear_matched_items(gram#core#get_source_dict(c))
       endfor
       let g:source_called_order = []
       let g:matcher_called_order = []
