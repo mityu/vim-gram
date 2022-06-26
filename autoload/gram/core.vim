@@ -192,15 +192,18 @@ endfunction
 function! s:process_inputs(timeout) abort
   while 1
     let r = gram#mapping#lookup_mapping(s:current_mode, a:timeout)
-    if r.mapto ==# ''
+    if r.resolved ==# ''
       " No mappings found
       break
     endif
-    let [action, params] = split(r.mapto, '^.\{-}\zs%', 1)
-    if action ==# '' || !gram#action#exists(action)
-      " TODO: Do fallback
+    let [action, params] = split(r.resolved, '^.\{-}\zs\%(%\|$\)', 1)
+    if action ==# '' || !gram#action#exists(s:current_mode, action)
+      " Fallbacks
+      if has_key(s:fallback_on_nomap, s:current_mode)
+        call call(s:fallback_on_nomap[s:current_mode], [r])
+      endif
     else
-      let l:F = gram#action#get_action_func(s:current_mode, r.mapto)
+      let l:F = gram#action#get_action_func(s:current_mode, action)
       call call(l:F, [{'count': r.count, 'count1': r.count1}, params])
     endif
   endwhile
@@ -282,7 +285,7 @@ function! gram#core#register_actions() abort
   call l:Normal('select-prev-item', 'gram#core#select_prev_item')
   call l:Normal('select-next-item', 'gram#core#select_next_item')
   call l:Normal('switch-to-insert', {-> gram#core#switch_mode('insert')})
-  call l:Normal('quit', 'gram#core#quit')
+  call l:Normal('quit', {-> gram#core#quit()})
   " call l:Normal('do-default-item-action', )
   call l:Normal('do-item-action', 'gram#core#item_action')
 
@@ -311,3 +314,6 @@ function! gram#core#feedkeys_to_vim(keys, mode = '') abort
   call gram#getchar#ignore_follow_keys(a:keys)
   call feedkeys(a:keys, a:mode)
 endfunction
+
+" function! gram#core#should_abort_matching() abort
+" endfunction
