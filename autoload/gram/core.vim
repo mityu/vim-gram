@@ -48,8 +48,8 @@ function! gram#core#setup(config) abort
   call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   " TODO: Pass UI options
   call gram#ui#setup({'prompt_text': '>> '})
+  call s:set_select_item_idx(0)
   call gram#core#gather_candidates()
-  call s:on_input_changed()
 endfunction
 
 function! gram#core#quit() abort
@@ -108,7 +108,7 @@ function! gram#core#get_matcher_of(source_name) abort
 endfunction
 
 function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
-  let s:selected_item_index = 0
+  call s:set_select_item_idx(0)
   for s in s:source_dicts
     call gram#core#invoke_matcher_of_one_matcher(s, a:filter_text)
   endfor
