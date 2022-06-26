@@ -18,6 +18,7 @@ function! s:__init__() abort
   let s:source_config = {}
   let s:matcher_items_queue = []
   let s:selected_item = {}
+  let s:should_block_matcher_call = 0
 
 
   const s:statusline_modifiers = {
@@ -166,7 +167,11 @@ endfunction
 function! s:add_items(items) abort
   let items = s:_standardize_items(a:items)
   call extend(s:context.items.base, items)
-  call s:_trigger_matcher(items)
+  if s:should_block_matcher_call
+    call timer_start(0, {-> s:_trigger_matcher(items)})
+  else
+    call s:_trigger_matcher(items)
+  endif
 endfunction
 
 function! s:get_items(...) abort
@@ -287,7 +292,6 @@ function! s:on_input_changed(input, curcol) abort
   call s:_filter_all_items()
 endfunction
 
-" Call matcher function asynchronously by using timer.
 function! s:_trigger_matcher(items) abort
   if s:getchar.get_input() ==# ''
     call s:_add_completion(a:items)
@@ -297,10 +301,15 @@ function! s:_trigger_matcher(items) abort
   let completion = []
 
   for item in s:matcher_items_queue
-    if getchar(1)
-      let s:matcher_items_queue = []
-      return
-    endif
+    try
+      let s:should_block_matcher_call = 1
+      if getchar(1)
+        let s:matcher_items_queue = []
+        return
+      endif
+    finally
+      let s:should_block_matcher_call = 0
+    endtry
     if s:matcher.invoke_matcher(item)
       call add(completion, item)
     endif
