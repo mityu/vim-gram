@@ -350,7 +350,7 @@ function! gram#core#register_actions() abort
   call l:Insert('delete-character', {-> gram#inputbuf#delete_character()})
   call l:Insert('delete-word', {-> gram#inputbuf#delete_word()})
   call l:Insert('move-forward', {-> gram#inputbuf#move_forward()})
-  call l:Insert('move-backword', {-> gram#inputbuf#move_backword()})
+  call l:Insert('move-backward', {-> gram#inputbuf#move_backward()})
   call l:Insert('clear-line', {-> gram#inputbuf#clear()})
 endfunction
 

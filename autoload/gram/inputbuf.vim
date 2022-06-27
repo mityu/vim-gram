@@ -54,7 +54,7 @@ function! gram#inputbuf#delete_word() abort
   call gram#inputbuf#delete_by_pattern('\w\+\s*\%#')
 endfunction
 
-function! gram#inputbuf#move_backword() abort
+function! gram#inputbuf#move_backward() abort
   let s:column -= strlen(matchstr(s:sep_at_column()[0], '.$'))
   call call(s:Core.onCursorMoved, [])
 endfunction
