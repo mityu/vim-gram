@@ -48,7 +48,10 @@ function! gram#core#setup(config) abort
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
   " TODO: Pass UI options
   call gram#ui#setup({'prompt_text': '>> '})
-  call gram#inputbuf#setup(funcref('s:on_input_changed'))
+  call gram#inputbuf#setup({
+        \ 'onInputChanged': funcref('s:on_input_changed'),
+        \ 'onCursorMoved': funcref('s:on_cursor_moved'),
+        \ })
   call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   call s:set_select_item_idx(0)
   call gram#core#gather_candidates()
@@ -264,6 +267,12 @@ function! s:on_input_changed() abort
     let s.should_clear_matched_items = 1
   endfor
   call gram#core#invoke_matcher_with_filter_text(text)
+endfunction
+
+function! s:on_cursor_moved() abort
+  let text = gram#inputbuf#get_text()
+  let column = gram#inputbuf#get_cursor_column()
+  call gram#ui#on_input_changed(text, column)
 endfunction
 
 function! gram#core#switch_mode(mode) abort

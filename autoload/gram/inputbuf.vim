@@ -3,15 +3,15 @@ scriptversion 4
 " The cursor column is 1 indexed as same as Vim in insert mode.
 let s:text = ''
 let s:column = 1
-let s:CallbackOnTextChanged = v:null
+let s:Core = {}  " Functions exported by core.vim
 
-function! gram#inputbuf#setup(F) abort
-  let s:CallbackOnTextChanged = a:F
+function! gram#inputbuf#setup(Funcs) abort
+  let s:Core = a:Funcs
   call gram#inputbuf#clear()
 endfunction
 
 function! gram#inputbuf#quit() abort
-  let s:CallbackOnTextChanged = v:null
+  let s:Core = {}
 endfunction
 
 function! s:sep_at_column() abort
@@ -22,7 +22,7 @@ function! gram#inputbuf#add_string(c) abort
   let t = s:sep_at_column()
   let s:text = t[0] .. a:c .. t[1]
   let s:column += strlen(a:c)
-  call call(s:CallbackOnTextChanged, [])
+  call call(s:Core.onInputChanged, [])
 endfunction
 
 function! gram#inputbuf#delete_by_pattern(p) abort
@@ -37,13 +37,13 @@ function! gram#inputbuf#delete_by_pattern(p) abort
   endif
   let s:text = strpart(s:text, 0, s) .. s:text[e :]
   let s:column = s + 1
-  call call(s:CallbackOnTextChanged, [])
+  call call(s:Core.onInputChanged, [])
 endfunction
 
 function! gram#inputbuf#clear() abort
   let s:text = ''
   let s:column = 1
-  call call(s:CallbackOnTextChanged, [])
+  call call(s:Core.onInputChanged, [])
 endfunction
 
 function! gram#inputbuf#delete_character() abort
@@ -56,15 +56,17 @@ endfunction
 
 function! gram#inputbuf#move_backword() abort
   let s:column -= strlen(matchstr(s:sep_at_column()[0], '.$'))
+  call call(s:Core.onCursorMoved, [])
 endfunction
 
 function! gram#inputbuf#move_forward() abort
   let s:column += strlen(matchstr(s:sep_at_column()[1], '^.'))
+  call call(s:Core.onCursorMoved, [])
 endfunction
 
 function gram#inputbuf#set_text(text) abort
   let s:text = a:text
-  call call(s:CallbackOnTextChanged, [])
+  call call(s:Core.onInputChanged, [])
 endfunction
 
 function! gram#inputbuf#get_text() abort
