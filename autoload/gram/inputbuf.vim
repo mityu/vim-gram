@@ -54,11 +54,11 @@ function! gram#inputbuf#delete_word() abort
   call gram#inputbuf#delete_by_pattern('\w\+\s*\%#')
 endfunction
 
-function! gram#inputbuf#move_left() abort
+function! gram#inputbuf#move_backword() abort
   let s:column -= strlen(matchstr(s:sep_at_column()[0], '.$'))
 endfunction
 
-function! gram#inputbuf#move_right() abort
+function! gram#inputbuf#move_forward() abort
   let s:column += strlen(matchstr(s:sep_at_column()[1], '^.'))
 endfunction
 
