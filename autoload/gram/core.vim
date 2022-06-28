@@ -43,6 +43,7 @@ function! gram#core#setup(config) abort
           \ 'items_to_be_filtered': [],
           \ 'should_invoke_matcher': 0,
           \ 'should_clear_matched_items': 0,
+          \ 'timer_invoke_matcher': gram#timer#null(),
           \})
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
@@ -58,10 +59,16 @@ function! gram#core#setup(config) abort
 endfunction
 
 function! gram#core#quit() abort
-  " TODO: Stop matcher, stop source
   call gram#getchar#quit()
   call gram#inputbuf#quit()
   call gram#ui#quit()
+  for sdict in s:source_dicts
+    call sdict.timer_invoke_matcher.stop()
+    let s = gram#source#get(sdict.name)
+    if has_key(s, 'quit')
+      call call(s.quit, [])
+    endif
+  endfor
   let s:source_dicts = []
 endfunction
 
@@ -123,7 +130,8 @@ function! gram#core#add_candidates(name, candidates) abort
   " getchar() calls, call matcher with delay using timer.
   let s.should_invoke_matcher = 1
   if gram#core#should_block_matcher_call()
-    call timer_start(0, {-> gram#core#invoke_matcher_of_one_matcher(
+    let s.timer_invoke_matcher =
+          \gram#timer#start(0, {-> gram#core#invoke_matcher_of_one_matcher(
           \gram#core#get_source_dict(a:name),
           \gram#inputbuf#get_text())})
   else
