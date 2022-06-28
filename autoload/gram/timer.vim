@@ -3,7 +3,7 @@ scriptversion 4
 let s:timer = {'timerID': 0}
 
 function! s:timer.is_running() abort
-  return !empty(self.timerID)
+  return !empty(timer_info(self.timerID))
 endfunction
 
 function! s:timer.stop() abort
