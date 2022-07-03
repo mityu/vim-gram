@@ -171,7 +171,8 @@ function! gram#core#add_matched_items(source_name, items) abort
 
   " A small hack to reduce flickers.
   " Bad:  clear items -> call matcher -> show matched items
-  " Good: call matcher -> clear items -> show matcher
+  " Good: call matcher -> clear items -> show matched items
+  " TODO: Also clear matched items of other sources?
   if s.should_clear_matched_items
     call gram#core#clear_matched_items(s)
     let s.should_clear_matched_items = 0
