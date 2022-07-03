@@ -58,14 +58,20 @@ function! gram#core#setup(config) abort
 endfunction
 
 function! gram#core#quit() abort
-  " TODO: Stop matcher
   call gram#getchar#quit()
   call gram#inputbuf#quit()
   call gram#ui#quit()
   for sdict in s:source_dicts
+    " Stop item gathering
     let s = gram#source#get(sdict.name)
     if has_key(s, 'quit')
       call call(s.quit, [])
+    endif
+
+    " Stop item matching
+    let m = gram#matcher#get(sdict.matcher)
+    if has_key(m, 'quit')
+      call call(m.quit, [])
     endif
   endfor
   let s:source_dicts = []
