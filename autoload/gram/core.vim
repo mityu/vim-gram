@@ -43,7 +43,6 @@ function! gram#core#setup(config) abort
           \ 'items_to_be_filtered': [],
           \ 'should_invoke_matcher': 0,
           \ 'should_clear_matched_items': 0,
-          \ 'timer_invoke_matcher': gram#timer#null(),
           \})
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
@@ -59,11 +58,11 @@ function! gram#core#setup(config) abort
 endfunction
 
 function! gram#core#quit() abort
+  " TODO: Stop matcher
   call gram#getchar#quit()
   call gram#inputbuf#quit()
   call gram#ui#quit()
   for sdict in s:source_dicts
-    call sdict.timer_invoke_matcher.stop()
     let s = gram#source#get(sdict.name)
     if has_key(s, 'quit')
       call call(s.quit, [])
@@ -110,15 +109,10 @@ function! gram#core#add_candidates(name, candidates) abort
   call extend(s.candidates, a:candidates)
   call extend(s.items_to_be_filtered, a:candidates)
 
-  if s.should_invoke_matcher
-    " Matcher is already invoked.
-    return
-  endif
-
   " If a source uses job to gather candidates and matcher uses
   " gram#core#check_key_typed() function, its out_cb can be called while
   " getchar() calls in gram#core#check_key_typed() in matcher.  And if the
-  " oub_cb is called while the getchar() calls, the function call depth can go
+  " out_cb is called while the getchar() calls, the function call depth can go
   " infinitely deep like this:
   "  matcher
   "  -> getchar() (in gram#core#check_key_typed())
@@ -127,14 +121,9 @@ function! gram#core#add_candidates(name, candidates) abort
   "  -> matcher
   "  -> ...
   " In order to avoid this problem, when this function is called while
-  " getchar() calls, call matcher with delay using timer.
+  " getchar() calls, do not call matcher here.  The matcher is called later.
   let s.should_invoke_matcher = 1
-  if gram#core#should_block_matcher_call()
-    let s.timer_invoke_matcher =
-          \gram#timer#start(0, {-> gram#core#invoke_matcher_of_one_matcher(
-          \gram#core#get_source_dict(a:name),
-          \gram#inputbuf#get_text())})
-  else
+  if !gram#core#should_block_matcher_call()
     call gram#core#invoke_matcher_of_one_matcher(s, gram#inputbuf#get_text())
   endif
 endfunction
@@ -143,21 +132,37 @@ function! gram#core#get_candidates(name) abort
   return deepcopy(gram#core#get_source_dict(a:name).candidates)
 endfunction
 
+
 function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
-  call s:set_select_item_idx(0)
   for s in s:source_dicts
     call gram#core#invoke_matcher_of_one_matcher(s, a:filter_text)
   endfor
 endfunction
 
 function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
-  if a:sourcedict.should_invoke_matcher
+  if a:sourcedict.should_invoke_matcher && !gram#core#should_abort_matching()
     let a:sourcedict.should_invoke_matcher = 0
     let m = gram#matcher#get(a:sourcedict.matcher)
     let c = remove(a:sourcedict, 'items_to_be_filtered')
     let a:sourcedict.items_to_be_filtered = []
-    call m.match(c, a:filter_text,
-          \ funcref('gram#core#add_matched_items', [a:sourcedict.name]))
+    if a:filter_text ==# ''
+      call gram#core#add_matched_items(a:sourcedict.name, c)
+    else
+      while !empty(c)
+        " TODO: Make option to specify how many items to filter at once.
+        " (Source specific option, set -1 to filter all items at once.)
+        let items = remove(c, 0, min([99, len(c) - 1]))
+        call m.match(items, a:filter_text,
+              \ funcref('gram#core#add_matched_items', [a:sourcedict.name]))
+        if gram#core#should_abort_matching()
+          if !empty(c)
+            let a:sourcedict.items_to_be_filtered = c
+            let a:sourcedict.should_invoke_matcher = 1
+          endif
+          break
+        endif
+      endwhile
+    endif
   endif
 endfunction
 
@@ -263,6 +268,9 @@ function! s:process_inputs(timeout) abort
       call call(l:F, [{'count': r.count, 'count1': r.count1}, params])
     endif
   endwhile
+
+  " Invoke matcher to filter items if needed.
+  call gram#core#invoke_matcher_with_filter_text(gram#inputbuf#get_text())
 endfunction
 
 function! s:on_input_changed() abort
@@ -274,7 +282,9 @@ function! s:on_input_changed() abort
     let s.should_invoke_matcher = 1
     let s.should_clear_matched_items = 1
   endfor
-  call gram#core#invoke_matcher_with_filter_text(text)
+  call s:set_select_item_idx(0)
+  " NOTE: Matcher is invoked in process_inputs() function later, so there's no
+  " need to call matcher here.
 endfunction
 
 function! s:on_cursor_moved() abort
@@ -367,7 +377,7 @@ function! gram#core#feedkeys_to_vim(keys, mode = '') abort
   call feedkeys(a:keys, a:mode)
 endfunction
 
-function! gram#core#check_key_typed() abort
+function! gram#core#should_abort_matching() abort
   " TODO: This function should placed in getchar.vim?
   try
     call gram#core#block_matcher_call()
