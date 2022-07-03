@@ -12,6 +12,18 @@ function! s:timer.stop() abort
   endif
 endfunction
 
+function! s:timer.pause() abort
+  call timer_pause(self.timerID, 1)
+endfunction
+
+function! s:timer.resume() abort
+  call timer_pause(self.timerID, 0)
+endfunction
+
+function! s:timer.getID() abort
+  return self.timerID
+endfunction
+
 function! gram#timer#start(time, Callback, options = {}) abort
   let timer = deepcopy(s:timer)
   let timer.timerID = timer_start(a:time, a:Callback, a:options)
