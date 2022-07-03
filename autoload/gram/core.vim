@@ -162,7 +162,10 @@ function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
               \ funcref('gram#core#add_matched_items', [a:sourcedict.name]))
         if gram#core#should_abort_matching()
           if !empty(c)
-            let a:sourcedict.items_to_be_filtered = c
+            " Note: The add_candidates() can be called and candidates can be
+            " added while the should_abort_matching() call.
+            let a:sourcedict.items_to_be_filtered =
+                  \ c + a:sourcedict.items_to_be_filtered
             let a:sourcedict.should_invoke_matcher = 1
           endif
           break
