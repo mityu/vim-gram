@@ -22,9 +22,9 @@ Describe gram/core.vim
     End
 
     After all
+      call gram#core#quit()
       call gram#matcher#clear()
       call gram#source#clear()
-      call gram#core#quit()
       delfunction Filter
     End
 
@@ -96,9 +96,9 @@ Describe gram/core.vim
       unlet g:source_called_order
       unlet g:matcher_called_order
       delfunction GatherCandidates
+      call gram#core#quit()
       call gram#matcher#clear()
       call gram#source#clear()
-      call gram#core#quit()
       delfunction Filter
     End
 
