@@ -1,6 +1,9 @@
 Describe gram/inputbuf.vim
   Before all
-    call gram#inputbuf#setup({-> 0})
+    call gram#inputbuf#setup({
+          \ 'onInputChanged': {-> 0},
+          \ 'onCursorMoved': {-> 0},
+          \ })
   End
 
   Before each
@@ -90,35 +93,35 @@ Describe gram/inputbuf.vim
 
   End
 
-  Describe move_left()
-    It makes cursor move left
+  Describe move_backward()
+    It makes cursor move backward
       call gram#inputbuf#set_text('a')
       call gram#inputbuf#set_cursor_column(2)
-      call gram#inputbuf#move_left()
+      call gram#inputbuf#move_backward()
       Assert Equals(gram#inputbuf#get_cursor_column(), 1)
     End
 
-    It makes cursor move left (with multibyte-character)
+    It makes cursor move backward (with multibyte-character)
       call gram#inputbuf#set_text('あ')
       call gram#inputbuf#set_cursor_column(strlen('あ') + 1)
-      call gram#inputbuf#move_left()
+      call gram#inputbuf#move_backward()
       Assert Equals(gram#inputbuf#get_cursor_column(), 1)
     End
 
   End
 
-  Describe move_right()
-    It makes cursor move right
+  Describe move_forward()
+    It makes cursor move forward
       call gram#inputbuf#set_text('a')
       call gram#inputbuf#set_cursor_column(1)
-      call gram#inputbuf#move_right()
+      call gram#inputbuf#move_forward()
       Assert Equals(gram#inputbuf#get_cursor_column(), 2)
     End
 
-    It makes cursor move right (with multibyte-character)
+    It makes cursor move forward (with multibyte-character)
       call gram#inputbuf#set_text('あ')
       call gram#inputbuf#set_cursor_column(1)
-      call gram#inputbuf#move_right()
+      call gram#inputbuf#move_forward()
       Assert Equals(gram#inputbuf#get_cursor_column(), strlen('あ') + 1)
     End
 
