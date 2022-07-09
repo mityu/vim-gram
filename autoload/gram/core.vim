@@ -280,7 +280,7 @@ function! s:process_inputs(timeout) abort
       " No mappings found
       break
     endif
-    let [action, params] = split(r.resolved, '^[^%]*\zs%', 1)
+    let [action, params] = split(r.resolved, '^[^%]*\zs\%(%\|$\)', 1)[0 : 1]
     if action ==# '' || !gram#action#exists(s:current_mode, action)
       " Fallbacks
       if has_key(s:fallback_on_nomap, s:current_mode)
