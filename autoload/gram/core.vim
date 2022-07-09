@@ -8,6 +8,7 @@ let s:fallback_on_nomap = {}
 let s:current_mode = 'normal'
 const s:valid_modes = ['normal', 'insert']
 let s:should_block_matcher_call = 0
+let s:processing_key_types = 0
 " let s:should_clear_matched_items = 0
 
 let s:is_initialize_event_fired = 0
@@ -28,6 +29,7 @@ function! gram#core#setup(config) abort
   endif
 
   let s:should_block_matcher_call = 0
+  let s:processing_key_types = 0
   let s:fallback_on_nomap = {'insert': {r -> gram#inputbuf#add_string(repeat(r.resolved, r.count1))}}
   call gram#core#switch_mode('normal')
   " TODO: Make it available to set default UI
@@ -37,6 +39,8 @@ function! gram#core#setup(config) abort
     call add(s:source_dicts, {
           \ 'name': s.name,
           \ 'matcher': s.matcher,
+          \ 'kinds': get(s, 'kinds', []),
+          \ 'default_action': get(s, 'default_action', ''),
           \ 'candidates': [],
           \ 'matched_items': [],
           \ 'matched_items_count': 0,
@@ -109,7 +113,7 @@ function! gram#core#clear_candidates(sourcedict) abort
 endfunction
 
 function! gram#core#add_candidates(name, candidates) abort
-  " TODO: Normalize candidates
+  let candidates = map(a:candidates, 'gram#core#normalize_candidate(v:val)')
   let s = gram#core#get_source_dict(a:name)
   " TODO: deepcopy()?
   call extend(s.candidates, a:candidates)
@@ -129,7 +133,7 @@ function! gram#core#add_candidates(name, candidates) abort
   " In order to avoid this problem, when this function is called while
   " getchar() calls, do not call matcher here.  The matcher is called later.
   let s.should_invoke_matcher = 1
-  if !gram#core#should_block_matcher_call()
+  if !(gram#core#should_block_matcher_call() || s:processing_key_types)
     call gram#core#invoke_matcher_of_one_matcher(s, gram#inputbuf#get_text())
   endif
 endfunction
@@ -138,6 +142,13 @@ function! gram#core#get_candidates(name) abort
   return deepcopy(gram#core#get_source_dict(a:name).candidates)
 endfunction
 
+function! gram#core#normalize_candidate(candidate) abort
+  if type(a:candidate) == v:t_dict
+    return a:candidate
+  else
+    return {'word': a:candidate}
+  endif
+endfunction
 
 function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
   for s in s:source_dicts
@@ -146,7 +157,7 @@ function! gram#core#invoke_matcher_with_filter_text(filter_text) abort
 endfunction
 
 function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
-  if a:sourcedict.should_invoke_matcher && !gram#core#should_abort_matching()
+  if a:sourcedict.should_invoke_matcher && !s:processing_key_types
     let a:sourcedict.should_invoke_matcher = 0
     let m = gram#matcher#get(a:sourcedict.matcher)
     let c = remove(a:sourcedict, 'items_to_be_filtered')
@@ -168,6 +179,7 @@ function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
                   \ c + a:sourcedict.items_to_be_filtered
             let a:sourcedict.should_invoke_matcher = 1
           endif
+          let s:processing_key_types = 1
           break
         endif
       endwhile
@@ -182,6 +194,7 @@ function! gram#core#add_matched_items(source_name, items) abort
   " Bad:  clear items -> call matcher -> show matched items
   " Good: call matcher -> clear items -> show matched items
   " TODO: Also clear matched items of other sources?
+  " TODO: Clear marked item list?
   if s.should_clear_matched_items
     call gram#core#clear_matched_items(s)
     let s.should_clear_matched_items = 0
@@ -196,7 +209,7 @@ function! gram#core#add_matched_items(source_name, items) abort
   endfor
   call extend(s.matched_items, a:items)
   let s.matched_items_count += len(a:items)
-  call gram#ui#on_items_added(total, a:items)
+  call gram#ui#on_items_added(total, map(deepcopy(a:items), 'v:val.word'))  " TODO: Pass dict?
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
@@ -232,7 +245,7 @@ function! gram#core#get_selected_item() abort
   for s in s:source_dicts
     let count = s.matched_items_count
     if (total + count) > s:selected_item_index
-      return s.matched_items[s:selected_item_index - total]
+      return [s, s.matched_items[s:selected_item_index - total]]
     else
       let total += count
     endif
@@ -267,7 +280,7 @@ function! s:process_inputs(timeout) abort
       " No mappings found
       break
     endif
-    let [action, params] = split(r.resolved, '^.\{-}\zs\%(%\|$\)', 1)
+    let [action, params] = split(r.resolved, '^[^%]*\zs%', 1)
     if action ==# '' || !gram#action#exists(s:current_mode, action)
       " Fallbacks
       if has_key(s:fallback_on_nomap, s:current_mode)
@@ -279,6 +292,7 @@ function! s:process_inputs(timeout) abort
     endif
   endwhile
 
+  let s:processing_key_types = 0
   " Invoke matcher to filter items if needed.
   call gram#core#invoke_matcher_with_filter_text(gram#inputbuf#get_text())
 endfunction
@@ -356,10 +370,17 @@ function! s:set_select_item_idx(idx) abort
   call gram#ui#on_selected_item_changed(a:idx)
 endfunction
 
-function! gram#core#item_action(c, params) abort
-  if gram#item_action#exists(params)
-    let items = [gram#core#get_selected_item()]  " TODO: Check marked items
-    let l:F = gram#item_action#get_action_func(params)
+function! gram#core#item_action(c, param) abort
+  let [sourcedict, item] = gram#core#get_selected_item()
+  let items = [item]
+  " TODO: Check marked items. If there're marked items, use them.
+  let action_name = sourcedict.default_action
+  if a:param !=# ''
+    let action_name = a:param
+  endif
+  if gram#item_action#exists(action_name)
+    let l:F = gram#item_action#get_action_func(action_name)
+    call gram#core#quit()  " TODO: Make this optional process.
     call call(l:F, [items])
   endif
 endfunction
@@ -370,7 +391,7 @@ function! gram#core#register_actions() abort
   call l:Normal('select-next-item', 'gram#core#select_next_item')
   call l:Normal('switch-to-insert', {-> gram#core#switch_mode('insert')})
   call l:Normal('quit', {-> gram#core#quit()})
-  " call l:Normal('do-default-item-action', )
+  call l:Normal('do-default-item-action', {c -> gram#core#item_action(c, '')})
   call l:Normal('do-item-action', 'gram#core#item_action')
 
   let l:Insert = {n, F -> gram#action#register('insert', n, F)}
@@ -380,6 +401,8 @@ function! gram#core#register_actions() abort
   call l:Insert('move-forward', {-> gram#inputbuf#move_forward()})
   call l:Insert('move-backward', {-> gram#inputbuf#move_backward()})
   call l:Insert('clear-line', {-> gram#inputbuf#clear()})
+  call l:Insert('select-prev-item', 'gram#core#select_prev_item')
+  call l:Insert('select-next-item', 'gram#core#select_next_item')
 endfunction
 
 function! gram#core#feedkeys_to_vim(keys, mode = '') abort
