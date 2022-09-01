@@ -6,7 +6,7 @@ Describe gram/core.vim
             \ })
       call gram#matcher#register('stridx', {
             \ 'match': {items, input, callback ->
-            \       callback(filter(items, 'stridx(v:val, input) >= 0'))}
+            \       callback(filter(items, 'stridx(v:val.word, input) >= 0'))}
             \ })
       call gram#core#setup({
             \ 'sources': [{'name': 'test', 'matcher': 'stridx'}],
@@ -36,18 +36,23 @@ Describe gram/core.vim
     It gathers candidates
       Assert Equals([], gram#core#get_matched_items('test'))
       call gram#core#gather_candidates()
-      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_matched_items('test'))
+      Assert Equals(gram#core#get_matched_items('test'),
+            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
       call gram#core#gather_candidates()
-      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
+      Assert Equals(gram#core#get_candidates('test'),
+            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
     End
 
     It filters candidates
       call gram#core#gather_candidates()
-      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_matched_items('test'))
+      Assert Equals(gram#core#get_matched_items('test'),
+            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
 
       call Filter('a')
-      Assert Equals(['aaa', 'bbb', 'ccc'], gram#core#get_candidates('test'))
-      Assert Equals(['aaa'], gram#core#get_matched_items('test'))
+      Assert Equals(gram#core#get_candidates('test'),
+            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
+      Assert Equals(gram#core#get_matched_items('test'),
+            \['aaa']->map('{"word": v:val}'))
     End
   End
 
@@ -62,7 +67,7 @@ Describe gram/core.vim
       let g:matcher_called_order = []
       function Match(id, items, input, callback) abort
         call add(g:matcher_called_order, a:id)
-        call call(a:callback, [filter(a:items, 'stridx(v:val, a:input) >= 0')])
+        call call(a:callback, [filter(a:items, 'stridx(v:val.word, a:input) >= 0')])
       endfunction
 
       let g:sources = []
@@ -119,7 +124,8 @@ Describe gram/core.vim
       call gram#core#gather_candidates()
       Assert Equals(g:source_called_order, range(3))
       for c in ['test0', 'test1', 'test2']
-        Assert Equals(gram#core#get_candidates(c), ['aaa', 'bbb', 'ccc'])
+        Assert Equals(gram#core#get_candidates(c),
+            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
       endfor
     End
 
@@ -129,7 +135,8 @@ Describe gram/core.vim
       call Filter('b')
       Assert Equals(g:matcher_called_order, range(3))
       for c in ['test0', 'test1', 'test2']
-        Assert Equals(gram#core#get_matched_items(c), ['bbb'])
+        Assert Equals(gram#core#get_matched_items(c),
+            \['bbb']->map('{"word": v:val}'))
       endfor
     End
   End
