@@ -24,6 +24,10 @@ function! gram#core#setup(config) abort
   call gram#core#register_actions()
 
   if !s:is_initialize_event_fired
+    call gram#source#load_from_runtimepath()
+    call gram#matcher#load_from_runtimepath()
+    call gram#item_action#load_from_runtimepath()
+    call gram#ui#load_from_runtimepath()
     doautocmd User gram-initialize
     let s:is_initialize_event_fired = 1
   endif
@@ -34,6 +38,7 @@ function! gram#core#setup(config) abort
   call gram#core#switch_mode('normal')
   " TODO: Make it available to set default UI
   call gram#ui#activate_UI(a:config.UI)
+  " TODO: Read kind/default_action information from options_for_source
   for s in a:config.sources
     " {name: "source-name", matcher: "matcher-name"}
     call add(s:source_dicts, {

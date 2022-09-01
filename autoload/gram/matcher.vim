@@ -13,3 +13,10 @@ endfunction
 function! gram#matcher#clear() abort
   let s:matchers = {}
 endfunction
+function! gram#matcher#load_from_runtimepath() abort
+  let modules = globpath(&runtimepath, 'autoload/gram/matcher/*.vim', 1, 1)
+        \->map({_, val -> fnamemodify(val, ':t:r')})
+  for module in modules
+    call call('gram#matcher#' .. module .. '#register', [])
+  endfor
+endfunction

@@ -4,6 +4,13 @@ let s:UIs = {}
 let s:active_UI = {}
 let s:active_UI_name = ''
 
+function! gram#ui#load_from_runtimepath() abort
+  let modules = globpath(&runtimepath, 'autoload/gram/ui/*.vim', 1, 1)
+        \->map({_, val -> fnamemodify(val, ':t:r')})
+  for module in modules
+    call call('gram#ui#' .. module .. '#register', [])
+  endfor
+endfunction
 function! gram#ui#register(name, ui) abort
   let s:UIs[a:name] = a:ui
 endfunction

@@ -29,6 +29,13 @@ function! gram#item_action#exists(name) abort
   return has_key(s:actions, kind) && has_key(s:actions[kind], name)
 endfunction
 
+function! gram#item_action#load_from_runtimepath() abort
+  let modules = globpath(&runtimepath, 'autoload/gram/kind/*.vim', 1, 1)
+        \->map({_, val -> fnamemodify(val, ':t:r')})
+  for module in modules
+    call call('gram#kind#' .. module .. '#register', [])
+  endfor
+endfunction
 " function! gram#item_action#exists_notify_error(name) abort
 "   let [kind, name] = split(a:name, ':')
 "   if !has_key(s:actions, kind)

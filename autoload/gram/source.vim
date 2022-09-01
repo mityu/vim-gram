@@ -27,3 +27,11 @@ function! gram#source#get_full_name(name) abort
   " TODO: Need to check if a:name is valid?
   return a:name
 endfunction
+
+function! gram#source#load_from_runtimepath() abort
+  let modules = globpath(&runtimepath, 'autoload/gram/source/*.vim', 1, 1)
+        \->map({_, val -> fnamemodify(val, ':t:r')})
+  for module in modules
+    call call('gram#source#' .. module .. '#register', [])
+  endfor
+endfunction
