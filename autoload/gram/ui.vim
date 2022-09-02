@@ -65,6 +65,14 @@ function! gram#ui#on_input_changed(text, column) abort
   call s:active_UI.on_input_changed(a:text, a:column)
 endfunction
 
+function! gram#ui#hide_cursor() abort
+  call s:active_UI.hide_cursor()
+endfunction
+
+function! gram#ui#show_cursor() abort
+  call s:active_UI.show_cursor()
+endfunction
+
 function! gram#ui#notify_error(msg) abort
   call s:active_UI.notify_error(a:msg)
 endfunction
@@ -111,6 +119,14 @@ function! s:headless_UI.on_items_deleted(ibeggin, iend) abort
 endfunction
 
 function! s:headless_UI.on_selected_item_changed(idx) abort
+  " Do Nothing
+endfunction
+
+function! s:headless_UI.hide_cursor() abort
+  " Do Nothing
+endfunction
+
+function! s:headless_UI.show_cursor() abort
   " Do Nothing
 endfunction
 

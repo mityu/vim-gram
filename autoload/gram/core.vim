@@ -64,6 +64,7 @@ function! gram#core#setup(config) abort
         \ })
   call gram#getchar#setup(funcref('gram#core#on_key_typed'))
   call s:set_select_item_idx(0)
+  call gram#ui#hide_cursor()  " TODO: Really needed?
   call gram#core#gather_candidates()
 endfunction
 
@@ -348,6 +349,7 @@ function! gram#core#switch_to_insert() abort
   let s:inputbuf_save.column = gram#inputbuf#get_cursor_column()
   let s:inputbuf_save.text = gram#inputbuf#get_text()
   call gram#core#switch_mode('insert')
+  call gram#ui#show_cursor()
 endfunction
 
 function! gram#core#select_next_item(c, _) abort
@@ -397,24 +399,30 @@ function! gram#core#item_action(c, param) abort
   endif
 endfunction
 
+function! gram#core#switch_to_normal() abort
+  call gram#core#switch_mode('normal')
+  call gram#ui#hide_cursor()
+endfunction
+
 function! gram#core#cancel_insert() abort
   call gram#inputbuf#set_cursor_column(s:inputbuf_save.column)
   call gram#inputbuf#set_text(s:inputbuf_save.text)
   call gram#core#switch_mode('normal')
   call gram#core#invoke_matcher_with_filter_text(s:inputbuf_save.text)
+  call gram#ui#hide_cursor()
 endfunction
 
 function! gram#core#register_actions() abort
   let l:Normal = {n, F -> gram#action#register('normal', n, F)}
   call l:Normal('select-prev-item', 'gram#core#select_prev_item')
   call l:Normal('select-next-item', 'gram#core#select_next_item')
-  call l:Normal('switch-to-insert', {-> gram#core#switch_to_insert()})
+  call l:Normal('switch-to-insert', 'gram#core#switch_to_insert')
   call l:Normal('quit', {-> gram#core#quit()})
   call l:Normal('do-default-item-action', {c -> gram#core#item_action(c, '')})
   call l:Normal('do-item-action', 'gram#core#item_action')
 
   let l:Insert = {n, F -> gram#action#register('insert', n, F)}
-  call l:Insert('switch-to-normal', {-> gram#core#switch_mode('normal')})
+  call l:Insert('switch-to-normal', {-> gram#core#switch_to_normal()})
   call l:Insert('cancel-insert', {-> gram#core#cancel_insert()})
   call l:Insert('delete-character', {-> gram#inputbuf#delete_character()})
   call l:Insert('delete-word', {-> gram#inputbuf#delete_word()})
