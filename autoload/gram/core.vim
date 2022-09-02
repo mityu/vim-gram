@@ -416,7 +416,7 @@ function! gram#core#register_actions() abort
   let l:Normal = {n, F -> gram#action#register('normal', n, F)}
   call l:Normal('select-prev-item', 'gram#core#select_prev_item')
   call l:Normal('select-next-item', 'gram#core#select_next_item')
-  call l:Normal('switch-to-insert', 'gram#core#switch_to_insert')
+  call l:Normal('switch-to-insert', {-> gram#core#switch_to_insert()})
   call l:Normal('quit', {-> gram#core#quit()})
   call l:Normal('do-default-item-action', {c -> gram#core#item_action(c, '')})
   call l:Normal('do-item-action', 'gram#core#item_action')
