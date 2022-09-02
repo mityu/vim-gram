@@ -16,6 +16,10 @@ let s:is_initialize_event_fired = 0
 augroup plugin-gram-dummy
   autocmd!
   autocmd User gram-initialize " Dummy
+  autocmd User gram-start-pre  " Dummy
+  autocmd User gram-start-post " Dummy
+  autocmd User gram-quit-pre   " Dummy
+  autocmd User gram-quit-post  " Dummy
 augroup END
 
 function! gram#core#setup(config) abort
@@ -32,6 +36,8 @@ function! gram#core#setup(config) abort
     doautocmd User gram-initialize
     let s:is_initialize_event_fired = 1
   endif
+
+  doautocmd User gram-start-pre
 
   let s:should_block_matcher_call = 0
   let s:processing_key_types = 0
@@ -66,9 +72,13 @@ function! gram#core#setup(config) abort
   call s:set_select_item_idx(0)
   call gram#ui#hide_cursor()  " TODO: Really needed?
   call gram#core#gather_candidates()
+
+  doautocmd User gram-start-post
 endfunction
 
 function! gram#core#quit() abort
+  doautocmd User gram-quit-pre
+
   call gram#getchar#quit()
   call gram#inputbuf#quit()
   call gram#ui#quit()
@@ -86,6 +96,8 @@ function! gram#core#quit() abort
     endif
   endfor
   let s:source_dicts = []
+
+  doautocmd User gram-quit-post
 endfunction
 
 function! gram#core#get_source_dict(name) abort
