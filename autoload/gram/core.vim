@@ -10,6 +10,7 @@ const s:valid_modes = ['normal', 'insert']
 let s:should_block_matcher_call = 0
 let s:processing_key_types = 0
 " let s:should_clear_matched_items = 0
+let s:inputbuf_save = #{column: 0, text: ''}
 
 let s:is_initialize_event_fired = 0
 augroup plugin-gram-dummy
@@ -263,7 +264,7 @@ function! gram#core#on_key_typed(c) abort
     if s:current_mode == 'normal'
       call gram#core#quit()
     elseif s:current_mode == 'insert'
-      call gram#core#switch_mode('normal')
+      call gram#core#cancel_insert()
     else
       call gram#ui#notify_error(
             \ '[gram.vim] Internal error: Unknown mode: ' .. s:current_mode)
@@ -343,6 +344,12 @@ function! gram#core#get_active_sources() abort
   return ss
 endfunction
 
+function! gram#core#switch_to_insert() abort
+  let s:inputbuf_save.column = gram#inputbuf#get_cursor_column()
+  let s:inputbuf_save.text = gram#inputbuf#get_text()
+  call gram#core#switch_mode('insert')
+endfunction
+
 function! gram#core#select_next_item(c, _) abort
   let total = 0
   for s in s:source_dicts
@@ -390,17 +397,25 @@ function! gram#core#item_action(c, param) abort
   endif
 endfunction
 
+function! gram#core#cancel_insert() abort
+  call gram#inputbuf#set_cursor_column(s:inputbuf_save.column)
+  call gram#inputbuf#set_text(s:inputbuf_save.text)
+  call gram#core#switch_mode('normal')
+  call gram#core#invoke_matcher_with_filter_text(s:inputbuf_save.text)
+endfunction
+
 function! gram#core#register_actions() abort
   let l:Normal = {n, F -> gram#action#register('normal', n, F)}
   call l:Normal('select-prev-item', 'gram#core#select_prev_item')
   call l:Normal('select-next-item', 'gram#core#select_next_item')
-  call l:Normal('switch-to-insert', {-> gram#core#switch_mode('insert')})
+  call l:Normal('switch-to-insert', {-> gram#core#switch_to_insert()})
   call l:Normal('quit', {-> gram#core#quit()})
   call l:Normal('do-default-item-action', {c -> gram#core#item_action(c, '')})
   call l:Normal('do-item-action', 'gram#core#item_action')
 
   let l:Insert = {n, F -> gram#action#register('insert', n, F)}
   call l:Insert('switch-to-normal', {-> gram#core#switch_mode('normal')})
+  call l:Insert('cancel-insert', {-> gram#core#cancel_insert()})
   call l:Insert('delete-character', {-> gram#inputbuf#delete_character()})
   call l:Insert('delete-word', {-> gram#inputbuf#delete_word()})
   call l:Insert('move-forward', {-> gram#inputbuf#move_forward()})
