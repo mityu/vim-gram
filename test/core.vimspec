@@ -37,22 +37,22 @@ Describe gram/core.vim
       Assert Equals([], gram#core#get_matched_items('test'))
       call gram#core#gather_candidates()
       Assert Equals(gram#core#get_matched_items('test'),
-            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
+            \['aaa', 'bbb', 'ccc']->map('gram#core#normalize_candidate(v:val)'))
       call gram#core#gather_candidates()
       Assert Equals(gram#core#get_candidates('test'),
-            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
+            \['aaa', 'bbb', 'ccc']->map('gram#core#normalize_candidate(v:val)'))
     End
 
     It filters candidates
       call gram#core#gather_candidates()
       Assert Equals(gram#core#get_matched_items('test'),
-            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
+            \['aaa', 'bbb', 'ccc']->map('gram#core#normalize_candidate(v:val)'))
 
       call Filter('a')
       Assert Equals(gram#core#get_candidates('test'),
-            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
+            \['aaa', 'bbb', 'ccc']->map('gram#core#normalize_candidate(v:val)'))
       Assert Equals(gram#core#get_matched_items('test'),
-            \['aaa']->map('{"word": v:val}'))
+            \['aaa']->map('gram#core#normalize_candidate(v:val)'))
     End
   End
 
@@ -125,7 +125,7 @@ Describe gram/core.vim
       Assert Equals(g:source_called_order, range(3))
       for c in ['test0', 'test1', 'test2']
         Assert Equals(gram#core#get_candidates(c),
-            \['aaa', 'bbb', 'ccc']->map('{"word": v:val}'))
+            \['aaa', 'bbb', 'ccc']->map('gram#core#normalize_candidate(v:val)'))
       endfor
     End
 
@@ -136,7 +136,7 @@ Describe gram/core.vim
       Assert Equals(g:matcher_called_order, range(3))
       for c in ['test0', 'test1', 'test2']
         Assert Equals(gram#core#get_matched_items(c),
-            \['bbb']->map('{"word": v:val}'))
+            \['bbb']->map('gram#core#normalize_candidate(v:val)'))
       endfor
     End
   End
