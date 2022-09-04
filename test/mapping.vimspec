@@ -9,6 +9,31 @@ Describe gram/mapping.vim
     call gram#mapping#add_mode('testmode')
   End
 
+  Describe unify_specialchar()
+    Before all
+      let g:UnifySpecialchar =
+            \ themis#helper('scope').funcs('autoload/gram/mapping.vim').unify_specialchar
+    End
+
+    After all
+      unlet g:UnifySpecialchar
+    End
+
+    It escapes special char
+      Assert Equals(g:UnifySpecialchar('<C-a>'), "\<C-a>")
+      Assert Equals(g:UnifySpecialchar('<lt>C-a>'), '<C-a>')
+    End
+
+    It converts <Nop> into an empty string
+      Assert Equals(g:UnifySpecialchar('<Nop>'), '')
+      Assert Equals(g:UnifySpecialchar("\<Nop>"), '')
+    End
+
+    It distinguish <lt>Nop> from <Nop>
+      Assert Equals(g:UnifySpecialchar('<lt>Nop>'), '<Nop>')
+    End
+  End
+
   Describe add_typed_key()
     It adds given string to input_queue
       call gram#mapping#add_typed_key('a')

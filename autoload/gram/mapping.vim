@@ -7,6 +7,8 @@ let s:modeopt_default = {
 let s:modeopts = {}
 let s:maptree_sets = {}
 
+" TODO: <Nop> is completely handled?
+" TODO: Handle <Ignore>
 
 " Mapping related functions
 "
@@ -58,7 +60,6 @@ function! gram#mapping#lookup_mapping(mode, timeout = 0) abort
 endfunction
 
 function! s:map(nomore, mode, lhs, rhs) abort
-  " TODO: Handle <Nop>
   if a:lhs ==# ''
     " TODO: Show error
     return
@@ -199,12 +200,16 @@ function! s:lookup_mapping(mode, input, timeouted) abort
     let sequence = split(rhs.mapto, '\zs') + sequence
   endwhile
 endfunction
+
 function! s:unify_specialchar(map) abort
   return substitute(a:map, '<.\{-}>',
         \ '\=s:escape_specialchar(submatch(0))', 'g')
 endfunction
 
 function! s:escape_specialchar(c) abort
+  if a:c ==? '<Nop>'
+    return ''
+  endif
   return eval(printf('"%s"', '\' .. a:c))
 endfunction
 
