@@ -228,7 +228,7 @@ function! gram#core#add_matched_items(source_name, items) abort
   endfor
   call extend(s.matched_items, a:items)
   let s.matched_items_count += len(a:items)
-  call gram#ui#on_items_added(total, map(deepcopy(a:items), 'v:val.word'))  " TODO: Pass dict?
+  call gram#ui#on_items_added(total, a:items)
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
