@@ -11,6 +11,7 @@ let s:should_block_matcher_call = 0
 let s:processing_key_types = 0
 " let s:should_clear_matched_items = 0
 let s:inputbuf_save = #{column: 0, text: ''}
+let s:insertmode_specialchar_remaining = 0
 
 let s:is_initialize_event_fired = 0
 augroup plugin-gram-dummy
@@ -41,7 +42,7 @@ function! gram#core#setup(config) abort
 
   let s:should_block_matcher_call = 0
   let s:processing_key_types = 0
-  let s:fallback_on_nomap = {'insert': {r -> gram#inputbuf#add_string(repeat(r.resolved, r.count1))}}
+  let s:fallback_on_nomap = {'insert': function('s:fallback_on_nomap_insert')}
   call gram#core#switch_mode('normal')
   " TODO: Make it available to set default UI
   call gram#ui#activate_UI(a:config.UI)
@@ -314,6 +315,21 @@ function! s:process_inputs(timeout) abort
   let s:processing_key_types = 0
   " Invoke matcher to filter items if needed.
   call gram#core#invoke_matcher_with_filter_text(gram#inputbuf#get_text())
+endfunction
+
+function! s:fallback_on_nomap_insert(r) abort
+  " Ignore special characters
+  " See also: vim/src/keymap.h
+  " TODO: Check K_NUL for MSDOS.
+  if strpart(a:r.resolved, 0, 1) ==# "\x80"
+    let s:insertmode_specialchar_remaining = 2
+    return
+  elseif s:insertmode_specialchar_remaining > 0
+    " TODO: Check strlen(a:r.resolved) or strlen(a:r.resolved) * a:r.count1?
+    let s:insertmode_specialchar_remaining -= 1
+    return
+  endif
+  call gram#inputbuf#add_string(repeat(a:r.resolved, a:r.count1))
 endfunction
 
 function! s:on_input_changed() abort
