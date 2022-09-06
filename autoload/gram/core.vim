@@ -61,10 +61,14 @@ function! gram#core#setup(config) abort
 
   " TODO: Read kind/default_action information from options_for_source
   for s in a:config.sources
-    " {name: "source-name", matcher: "matcher-name"}
+    let matcher = s:get_matcher_from_config(s)
+    if matcher ==# ''
+      call gram#ui#notify_error('No matcher is specified for source: ' .. s.name)
+    endif
+
     call add(s:source_dicts, {
           \ 'name': s.name,
-          \ 'matcher': s.matcher,
+          \ 'matcher': matcher,
           \ 'kinds': get(s, 'kinds', []),
           \ 'default_action': get(s, 'default_action', ''),
           \ 'candidates': [],
@@ -88,6 +92,18 @@ function! gram#core#setup(config) abort
   call gram#core#gather_candidates()
 
   doautocmd User gram-start-post
+endfunction
+
+function! s:get_matcher_from_config(sourcedict) abort
+  if has_key(a:sourcedict, 'matcher')
+    return a:sourcedict.matcher
+  endif
+  let [has, m] = gram#option#get_for_source(a:sourcedict.name, 'matcher', '')
+  if has
+    return m
+  endif
+  let [_, m] = gram#option#get_global('matcher', '')
+  return m
 endfunction
 
 function! gram#core#quit() abort
