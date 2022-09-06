@@ -124,7 +124,6 @@ function! gram#core#quit() abort
 
   call gram#getchar#quit()
   call gram#inputbuf#quit()
-  call gram#ui#quit()
   for sdict in s:source_dicts
     " Stop item gathering
     let s = gram#source#get(sdict.name)
@@ -139,6 +138,7 @@ function! gram#core#quit() abort
     endif
   endfor
   let s:source_dicts = []
+  call gram#ui#quit()
 
   doautocmd User gram-quit-post
 endfunction
