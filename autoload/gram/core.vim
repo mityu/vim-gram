@@ -44,8 +44,21 @@ function! gram#core#setup(config) abort
   let s:processing_key_types = 0
   let s:fallback_on_nomap = {'insert': function('s:fallback_on_nomap_insert')}
   call gram#core#switch_mode('normal')
-  " TODO: Make it available to set default UI
+
+  let ui = ''
+  if has_key(a:config, 'UI')
+    let ui = a:config.UI
+  else
+    let [has, ui] = gram#option#get_global('UI', '')
+    if !has
+      echohl Error
+      echomsg '[gram] Please specify UI.'
+      echohl NONE
+      return
+    endif
+  endif
   call gram#ui#activate_UI(a:config.UI)
+
   " TODO: Read kind/default_action information from options_for_source
   for s in a:config.sources
     " {name: "source-name", matcher: "matcher-name"}
