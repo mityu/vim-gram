@@ -57,7 +57,7 @@ function! gram#core#setup(config) abort
       return
     endif
   endif
-  call gram#ui#activate_UI(a:config.UI)
+  call gram#ui#activate_UI(ui)
 
   " TODO: Read kind/default_action information from options_for_source
   for s in a:config.sources
