@@ -64,12 +64,13 @@ function! gram#core#setup(config) abort
     let matcher = s:get_matcher_from_config(s)
     if matcher ==# ''
       call gram#ui#notify_error('No matcher is specified for source: ' .. s.name)
+      " TODO: return here?
     endif
 
     call add(s:source_dicts, {
           \ 'name': s.name,
           \ 'matcher': matcher,
-          \ 'kinds': get(s, 'kinds', []),
+          \ 'kinds': s:get_kinds_from_config(s),
           \ 'default_action': get(s, 'default_action', ''),
           \ 'candidates': [],
           \ 'matched_items': [],
@@ -104,6 +105,18 @@ function! s:get_matcher_from_config(sourcedict) abort
   endif
   let [_, m] = gram#option#get_global('matcher', '')
   return m
+endfunction
+
+function! s:get_kinds_from_config(sourcedict) abort
+  if has_key(a:sourcedict, 'kinds')
+    return a:sourcedict.kinds
+  endif
+  let [has, k] = gram#option#get_for_source(a:sourcedict.name, 'kinds', [])
+  if has
+    return k
+  endif
+  let [_, k] = gram#option#get_global('kinds', [])
+  return k
 endfunction
 
 function! gram#core#quit() abort
