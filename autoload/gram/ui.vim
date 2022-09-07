@@ -45,7 +45,10 @@ endfunction
 
 function! gram#ui#quit() abort
   call s:active_UI.quit()
-  let s:active_UI = {}
+  " NOTE: Some functions (ex. on_items_added()) can be called after this
+  " function is called. Set the headless UI to the active UI and avoid "No
+  " such function" error.
+  let s:active_UI = s:headless_UI
   let s:active_UI_name = ''
 endfunction
 
