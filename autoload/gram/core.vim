@@ -61,7 +61,7 @@ function! gram#core#setup(config) abort
 
   " TODO: Read kind/default_action information from options_for_source
   for s in a:config.sources
-    let matcher = s:get_matcher_from_config(s)
+    let matcher = s:get_option_from_config(s, 'matcher', '')
     if matcher ==# ''
       call gram#ui#notify_error('No matcher is specified for source: ' .. s.name)
       " TODO: return here?
@@ -70,7 +70,7 @@ function! gram#core#setup(config) abort
     call add(s:source_dicts, {
           \ 'name': s.name,
           \ 'matcher': matcher,
-          \ 'kinds': s:get_kinds_from_config(s),
+          \ 'kinds': s:get_option_from_config(s, 'kind', ''),
           \ 'default_action': get(s, 'default_action', ''),
           \ 'candidates': [],
           \ 'matched_items': [],
@@ -95,28 +95,15 @@ function! gram#core#setup(config) abort
   doautocmd User gram-start-post
 endfunction
 
-function! s:get_matcher_from_config(sourcedict) abort
-  if has_key(a:sourcedict, 'matcher')
-    return a:sourcedict.matcher
+function! s:get_option_from_config(sourcedict, option, default) abort
+  if has_key(a:sourcedict, a:option)
+    return a:sourcedict[a:option]
   endif
-  let [has, m] = gram#option#get_for_source(a:sourcedict.name, 'matcher', '')
+  let [has, v] = gram#option#get_for_source(a:sourcedict.name, a:option, a:default)
   if has
-    return m
+    return v
   endif
-  let [_, m] = gram#option#get_global('matcher', '')
-  return m
-endfunction
-
-function! s:get_kinds_from_config(sourcedict) abort
-  if has_key(a:sourcedict, 'kinds')
-    return a:sourcedict.kinds
-  endif
-  let [has, k] = gram#option#get_for_source(a:sourcedict.name, 'kinds', [])
-  if has
-    return k
-  endif
-  let [_, k] = gram#option#get_global('kinds', [])
-  return k
+  return gram#option#get_global(a:option, a:default)[1]
 endfunction
 
 function! gram#core#quit() abort
