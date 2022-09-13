@@ -42,6 +42,8 @@ function! gram#core#setup(config) abort
 
   let s:should_block_matcher_call = 0
   let s:processing_key_types = 0
+  let s:insertmode_specialchar_remaining = 0
+  let s:inputbuf_save = #{column: 0, text: ''}
   let s:fallback_on_nomap = {'insert': function('s:fallback_on_nomap_insert')}
   call gram#core#switch_mode('normal')
 
