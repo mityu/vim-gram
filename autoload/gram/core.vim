@@ -2,21 +2,18 @@ scriptversion 4
 " core.vim can depend on any other script, but any other script, except for
 " custom.vim, cannot depend on core.vim
 
-" TODO: PreviewOptions: auto, manual, none
-" TODO: Fix preview is not shown at first.
-
 let s:source_dicts = []
 let s:selected_item_index = 0
 let s:fallback_on_nomap = {}
 let s:current_mode = 'normal'
 const s:valid_modes = ['normal', 'insert']
-let s:should_block_matcher_call = 0
-let s:processing_key_types = 0
+let s:should_block_matcher_call = 0  " Bigger than 0 when matcher shouldn't be triggered.
+let s:processing_key_types = 0  " True if processing user's key types.
 " let s:should_clear_matched_items = 0
 let s:inputbuf_save = #{column: 0, text: ''}
-let s:insertmode_specialchar_remaining = 0
+let s:insertmode_specialchar_remaining = 0  " Counter for special chars that should be ignored.
 let s:timer_request_preview = gram#timer#null()
-let s:showing_preview = 0
+let s:showing_preview = 0  " True when showing preview.
 
 let s:is_initialize_event_fired = 0
 augroup plugin-gram-dummy

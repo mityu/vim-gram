@@ -77,7 +77,6 @@ function! gram#ui#show_cursor() abort
 endfunction
 
 function! gram#ui#preview_file(filename, opts = {}) abort
-  " TODO: Add support for specifying the first display line.
   call s:active_UI.preview_file(a:filename, a:opts)
 endfunction
 
