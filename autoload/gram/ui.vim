@@ -76,6 +76,23 @@ function! gram#ui#show_cursor() abort
   call s:active_UI.show_cursor()
 endfunction
 
+function! gram#ui#preview_file(filename, opts = {}) abort
+  " TODO: Add support for specifying the first display line.
+  call s:active_UI.preview_file(a:filename, a:opts)
+endfunction
+
+function! gram#ui#preview_buffer(bufnr, opts = {}) abort
+  call s'active_UI.preview_buffer(a:bufnr, a:opts)
+endfunction
+
+function! gram#ui#preview_text(text, opts = {}) abort
+  call s:active_UI.preview_text(a:text, a:opts)
+endfunction
+
+function! gram#ui#clear_preview() abort
+  call s:active_UI.clear_preview()
+endfunction
+
 function! gram#ui#notify_error(msg) abort
   call s:active_UI.notify_error(a:msg)
 endfunction
@@ -131,6 +148,22 @@ endfunction
 
 function! s:headless_UI.show_cursor() abort
   " Do Nothing
+endfunction
+
+function! s:headless_UI.preview_file(filename, opts) abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.preview_buffer(filename, opts) abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.preview_text(text, opts) abort
+  " Do nothing
+endfunction
+
+function! s:headless_UI.clear_preview() abort
+  " Do nothing
 endfunction
 
 function! s:headless_UI.quit() abort

@@ -2,6 +2,9 @@ scriptversion 4
 " core.vim can depend on any other script, but any other script, except for
 " custom.vim, cannot depend on core.vim
 
+" TODO: PreviewOptions: auto, manual, none
+" TODO: Fix preview is not shown at first.
+
 let s:source_dicts = []
 let s:selected_item_index = 0
 let s:fallback_on_nomap = {}
@@ -12,6 +15,8 @@ let s:processing_key_types = 0
 " let s:should_clear_matched_items = 0
 let s:inputbuf_save = #{column: 0, text: ''}
 let s:insertmode_specialchar_remaining = 0
+let s:timer_request_preview = gram#timer#null()
+let s:showing_preview = 0
 
 let s:is_initialize_event_fired = 0
 augroup plugin-gram-dummy
@@ -44,6 +49,8 @@ function! gram#core#setup(config) abort
   let s:processing_key_types = 0
   let s:insertmode_specialchar_remaining = 0
   let s:inputbuf_save = #{column: 0, text: ''}
+  let s:timer_request_preview = gram#timer#null()
+  let s:showing_preview = 0
   let s:fallback_on_nomap = {'insert': function('s:fallback_on_nomap_insert')}
   call gram#core#switch_mode('normal')
 
@@ -73,6 +80,8 @@ function! gram#core#setup(config) abort
           \ 'name': s.name,
           \ 'matcher': matcher,
           \ 'kinds': s:get_option_from_config(s, 'kind', ''),
+          \ 'preview': s:get_option_from_config(s, 'preview', 'none'),
+          \ 'preview_delay': s:get_option_from_config(s, 'preview_delay', 50),
           \ 'default_action': get(s, 'default_action', ''),
           \ 'candidates': [],
           \ 'matched_items': [],
@@ -238,6 +247,57 @@ function! gram#core#invoke_matcher_of_one_matcher(sourcedict, filter_text) abort
   endif
 endfunction
 
+function! gram#core#check_request_preview() abort
+  " This function is called when
+  "  - selected item changed
+  "  - the first matched items added
+  if gram#core#get_total_matched_items_count() == 0
+    return
+  endif
+
+  call s:timer_request_preview.stop()
+  let sourcedict = gram#core#get_selected_item()[0]
+  if sourcedict.preview ==# 'none' || sourcedict.preview ==# 'manual'
+    if s:showing_preview
+      " Clear preview if it's shown.
+      call gram#ui#clear_preview()  " TODO: Is it truly comfortable behavior?
+      let s:showing_preview = 0
+    endif
+    return
+  endif
+  if sourcedict.preview_delay == 0
+    call gram#core#request_preview()
+  else
+    let s:timer_request_preview = gram#timer#start(
+          \sourcedict.preview_delay,
+          \{-> gram#core#request_preview()}
+          \)
+  endif
+endfunction
+
+function! gram#core#request_preview() abort
+  call s:timer_request_preview.stop()
+  if gram#core#get_total_matched_items_count() == 0
+    return
+  endif
+
+  let [sourcedict, item] = gram#core#get_selected_item()
+  if sourcedict.preview ==# 'none'
+    return
+  endif
+
+  " TODO: Add checks for items are already there.
+  let s = gram#source#get(sourcedict.name)
+  if has_key(s, 'on_request_preview')
+    let s:showing_preview = 1
+    call s.on_request_preview(#{
+          \file: function('gram#ui#preview_file'),
+          \buffer: function('gram#ui#preview_buffer'),
+          \text: function('gram#ui#preview_text'),
+          \}, item)
+  endif
+endfunction
+
 function! gram#core#add_matched_items(source_name, items) abort
   let s = gram#core#get_source_dict(a:source_name)
 
@@ -251,16 +311,31 @@ function! gram#core#add_matched_items(source_name, items) abort
     let s.should_clear_matched_items = 0
   endif
 
-  let total = 0
-  for source in s:source_dicts
-    let total += source.matched_items_count
-    if source.name == a:source_name
-      break
+  if len(a:items) > 0
+    let total = 0
+    for source in s:source_dicts
+      let total += source.matched_items_count
+      if source.name == a:source_name
+        break
+      endif
+    endfor
+    call extend(s.matched_items, a:items)
+    let s.matched_items_count += len(a:items)
+    call gram#ui#on_items_added(total, a:items)
+
+    if s:selected_item_index > total
+      " Shift selected item index.
+      " Note that check_request_preview() is called in set_select_item_idx(),
+      " no need to call it here.
+      call s:set_select_item_idx(s:selected_item_index + len(a:items))
+    elseif total == 0
+      " There were no matched items; do preview for the first item.
+      call gram#core#check_request_preview()
     endif
-  endfor
-  call extend(s.matched_items, a:items)
-  let s.matched_items_count += len(a:items)
-  call gram#ui#on_items_added(total, a:items)
+  elseif gram#core#get_total_matched_items_count() == 0
+    " Must be no items are matched (at least now).  Clear preview.
+    call gram#ui#clear_preview()
+  endif
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
@@ -302,6 +377,10 @@ function! gram#core#get_selected_item() abort
     endif
   endfor
   return []  " When no items matched, nothing is selected.
+endfunction
+
+function! gram#core#get_total_matched_items_count() abort
+  return reduce(s:source_dicts, {acc, val -> acc + val.matched_items_count}, 0)
 endfunction
 
 function! gram#core#on_key_typed(c) abort
@@ -441,6 +520,7 @@ endfunction
 function! s:set_select_item_idx(idx) abort
   let s:selected_item_index = a:idx
   call gram#ui#on_selected_item_changed(a:idx)
+  call gram#core#check_request_preview()
 endfunction
 
 function! gram#core#item_action(c, param) abort
@@ -479,6 +559,7 @@ function! gram#core#register_actions() abort
   call l:Normal('quit', {-> gram#core#quit()})
   call l:Normal('do-default-item-action', {c -> gram#core#item_action(c, '')})
   call l:Normal('do-item-action', 'gram#core#item_action')
+  call l:Normal('request-preview', {-> gram#core#request_preview()})
 
   let l:Insert = {n, F -> gram#action#register('insert', n, F)}
   call l:Insert('switch-to-normal', {-> gram#core#switch_to_normal()})
@@ -490,6 +571,7 @@ function! gram#core#register_actions() abort
   call l:Insert('clear-line', {-> gram#inputbuf#clear()})
   call l:Insert('select-prev-item', 'gram#core#select_prev_item')
   call l:Insert('select-next-item', 'gram#core#select_next_item')
+  call l:Insert('request-preview', {-> gram#core#request_preview()})
 endfunction
 
 function! gram#core#feedkeys_to_vim(keys, mode = '') abort
