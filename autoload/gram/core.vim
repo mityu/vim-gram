@@ -90,7 +90,7 @@ function! gram#core#setup(config) abort
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
   " TODO: Pass UI options
-  call gram#ui#setup({'prompt_text': '>> '})
+  call gram#ui#setup({'prompt_text': '>> ', 'enable_preview': 1})
   call gram#inputbuf#setup({
         \ 'onInputChanged': funcref('s:on_input_changed'),
         \ 'onCursorMoved': funcref('s:on_cursor_moved'),
