@@ -55,8 +55,8 @@ function! gram#core#setup(config) abort
   if has_key(a:config, 'UI')
     let ui = a:config.UI
   else
-    let [has, ui] = gram#option#get_global('UI', '')
-    if !has
+    let ui = gram#option#get_global('UI', '')
+    if ui ==# ''
       echohl Error
       echomsg '[gram] Please specify UI.'
       echohl NONE
@@ -73,6 +73,7 @@ function! gram#core#setup(config) abort
       " TODO: return here?
     endif
 
+    " let default_action = get(s, 'default_action', '')
     call add(s:source_dicts, {
           \ 'name': s.name,
           \ 'matcher': matcher,
@@ -90,7 +91,7 @@ function! gram#core#setup(config) abort
   endfor
   call gram#mapping#set_mode_options('insert', {'handle_count': 0})
   " TODO: Pass UI options
-  call gram#ui#setup({'prompt_text': '>> ', 'enable_preview': 1})
+  call gram#ui#setup(s:get_ui_option_from_config(get(a:config, 'UI_options', {})))
   call gram#inputbuf#setup({
         \ 'onInputChanged': funcref('s:on_input_changed'),
         \ 'onCursorMoved': funcref('s:on_cursor_moved'),
@@ -107,11 +108,27 @@ function! s:get_option_from_config(sourcedict, option, default) abort
   if has_key(a:sourcedict, a:option)
     return a:sourcedict[a:option]
   endif
-  let [has, v] = gram#option#get_for_source(a:sourcedict.name, a:option, a:default)
-  if has
+  let v = gram#option#get_for_source(a:sourcedict.name, a:option, a:default)
+  if v != a:default
     return v
   endif
-  return gram#option#get_global(a:option, a:default)[1]
+  return gram#option#get_global(a:option, a:default)
+endfunction
+
+function! s:get_ui_option_from_config(config) abort
+  let opt = #{
+        \prompt_text: '',
+        \enable_preview: 0,
+        \}
+  let globalConfig = gram#option#get_global('UI_options', {})
+  for [k, v] in items(opt)
+    if has_key(a:config, k)
+      let opt[k] = a:config[k]
+    elseif has_key(globalConfig, k)
+      let opt[k] = globalConfig[k]
+    endif
+  endfor
+  return opt
 endfunction
 
 function! gram#core#quit() abort
