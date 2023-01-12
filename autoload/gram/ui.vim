@@ -96,6 +96,14 @@ function! gram#ui#notify_error(msg) abort
   call s:active_UI.notify_error(a:msg)
 endfunction
 
+function! gram#ui#get_statusline_width() abort
+  return s:active_UI.get_statusline_width()
+endfunction
+
+function! gram#ui#set_statusline(text) abort
+  call s:active_UI.set_statusline(a:text)
+endfunction
+
 function! s:verify_module(m) abort
   let valid = 1
   for method in []
@@ -167,4 +175,12 @@ endfunction
 
 function! s:headless_UI.quit() abort
   " Do nothing.
+endfunction
+
+function! s:headless_UI.get_statusline_width() abort
+  return 0
+endfunction
+
+function! s:headless_UI.set_statusline(text) abort
+  " Do nothing
 endfunction

@@ -350,6 +350,7 @@ function! gram#core#add_matched_items(source_name, items) abort
     " Must be no items are matched (at least now).  Clear preview.
     call gram#ui#clear_preview()
   endif
+  call gram#core#update_statusline()
 endfunction
 
 function! gram#core#get_matched_items(source_name) abort
@@ -378,6 +379,7 @@ function! gram#core#clear_matched_items(sourcedict) abort
   let a:sourcedict.matched_items_count = 0
 
   call gram#ui#on_items_deleted(ibegin, iend)
+  call gram#core#update_statusline()
 endfunction
 
 function! gram#core#get_selected_item() abort
@@ -534,6 +536,7 @@ endfunction
 function! s:set_select_item_idx(idx) abort
   let s:selected_item_index = a:idx
   call gram#ui#on_selected_item_changed(a:idx)
+  call gram#core#update_statusline()
   call gram#core#check_request_preview()
 endfunction
 
@@ -613,4 +616,22 @@ endfunction
 
 function! gram#core#should_block_matcher_call() abort
   return s:should_block_matcher_call
+endfunction
+
+function! gram#core#update_statusline() abort
+  " TODO: Make this configurable
+  let width = gram#ui#get_statusline_width()
+  let items_count = gram#core#get_total_matched_items_count()
+  if items_count == 0
+    let component = '(0/0)'
+  else
+    let component = printf('(%d/%d)', s:selected_item_index + 1, items_count)
+  endif
+  let component_width = strdisplaywidth(component)
+  if component_width > width
+    let component = matchstr(component, printf('\%%%dc', width + 1))
+  else
+    let component = repeat(' ', width - component_width) .. component
+  endif
+  call gram#ui#set_statusline(component)
 endfunction
