@@ -81,7 +81,7 @@ function! gram#ui#preview_file(filename, opts = {}) abort
 endfunction
 
 function! gram#ui#preview_buffer(bufnr, opts = {}) abort
-  call s'active_UI.preview_buffer(a:bufnr, a:opts)
+  call s:active_UI.preview_buffer(a:bufnr, a:opts)
 endfunction
 
 function! gram#ui#preview_text(text, opts = {}) abort
